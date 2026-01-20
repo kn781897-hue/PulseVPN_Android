@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- ЦВЕТ ФОНА: -->
+    <!-- F2 = 95% непрозрачности (почти сплошной) -->
+    <!-- 12141D = Ваш фирменный темный цвет -->
+    <solid android:color="#F212141D" />
+
+    <!-- Сильное закругление (как капсула) -->
+    <corners android:radius="50dp" />
+
+    <!-- Тонкая рамка для красоты -->
+    <stroke android:width="1dp" android:color="#33FFFFFF"/>
+</shape>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#1A000000"> <!-- Темная волна при нажатии -->
+
+    <item>
+        <shape android:shape="rectangle">
+            <!-- ФОН: Белый с 90% непрозрачности -->
+            <!-- E6 = 90% Alpha. D9 = 85% Alpha. Выбирайте, что нравится. -->
+            <solid android:color="#4BFFFFFF" />
+
+            <corners android:radius="18dp" />
+
+            <!-- РАМКА: Полупрозрачная черная (чтобы выделить стекло) -->
+            <stroke android:width="1dp" android:color="#1F000000"/>
+        </shape>
+    </item>
+
+    <!-- Маска для обрезки волны -->
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF"/>
+            <corners android:radius="18dp"/>
+        </shape>
+    </item>
+</ripple>
