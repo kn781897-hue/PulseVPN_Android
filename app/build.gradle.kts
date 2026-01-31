@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.google.gms.google.services)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -14,10 +14,18 @@ android {
         applicationId = "com.nikolay.myvpn"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            // Это заставит Gradle включить нативные библиотеки в APK
+            abiFilters.add("armeabi-v7a")
+            abiFilters.add("arm64-v8a")
+            abiFilters.add("x86")
+            abiFilters.add("x86_64")
+        }
     }
 
     buildTypes {
@@ -40,6 +48,7 @@ android {
 
 dependencies {
     implementation(files("libs/libxray.aar"))
+    implementation (files("libs/tun2socks.aar"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -54,4 +63,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-base:18.3.0")
     implementation("com.google.android.gms:play-services-ads-identifier:18.0.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation(platform("com.google.firebase:firebase-bom:32.7.1"))
+    implementation("com.google.firebase:firebase-database-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
 }

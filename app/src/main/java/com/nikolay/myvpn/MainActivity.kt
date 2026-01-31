@@ -16,10 +16,26 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.animation.Keyframe
 import android.animation.PropertyValuesHolder
 import android.os.CountDownTimer
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
+import com.google.firebase.database.database
+
+import com.google.firebase.Firebase
+import android.util.Log
 import android.widget.ImageButton
+import com.google.firebase.database.ktx.database
+
+
+import android.widget.Button
+
 
 class MainActivity : AppCompatActivity() {
+
+    private var serverIp = "31.58.87.8"
+    private var serverPort = 80
+    private var uuidFree = "default-free-uuid"
+    private var uuidPremium = "default-premium-uuid"
 
     private var currentState = VpnState.DISCONNECTED
     private enum class VpnState { DISCONNECTED, CONNECTING, CONNECTED }
@@ -35,6 +51,8 @@ class MainActivity : AppCompatActivity() {
 
     // Переменная, хранящая статус
     private var isPremiumUser = false
+
+    private var userExpiryDate: Long = 0 // Храним дату окончания
 
     // Аниматоры
     private var rotateAnimator: ObjectAnimator? = null    // Для кометы
@@ -66,6 +84,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        fetchServerConfig()
 
         SessionManager.expireSession(this)//Надо будет удалить
 
@@ -116,33 +136,67 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    private fun fetchServerConfig() {
+        val database = Firebase.database
+        val myRef = database.getReference("vpn_config")
+
+        myRef.get().addOnSuccessListener { snapshot ->
+            if (snapshot.exists()) {
+                // Получаем данные. Приводим типы безопасно.
+                serverIp = snapshot.child("ip").value.toString()
+                // Порт в Firebase хранится как Long
+                serverPort = (snapshot.child("port").value as? Long)?.toInt() ?: 80
+                uuidFree = snapshot.child("uuid_free").value.toString()
+                uuidPremium = snapshot.child("uuid_premium").value.toString()
+
+                Log.d("Firebase", "Config loaded: $serverIp:$serverPort")
+            }
+        }.addOnFailureListener {
+            Log.e("Firebase", "Error loading config", it)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
 
-        // Применяем тему
+        // 1. Применяем тему (Ваш старый код)
         ThemeManager.applyTheme(this)
-
-        // Красим элементы
         ThemeManager.applyTextColors(this, findViewById(R.id.tvAppName))
-
-        // Кнопки меню и настроек
         ThemeManager.applyBtnColors(this,
             findViewById(R.id.btnMenu),
             findViewById(R.id.btnSettings)
         )
 
-        SubscriptionManager.checkSubscriptionStatus { isActive ->
-            isPremiumUser = isActive
+        // 2. ОБНОВЛЕННАЯ ЛОГИКА ПРОВЕРКИ ПОДПИСКИ
+        val user = FirebaseAuth.getInstance().currentUser
 
-            // Если мы уже подключены и купили премиум - обновляем текст сразу
-            if (currentState == VpnState.CONNECTED && isPremiumUser) {
-                connectionTimer?.cancel() // Убираем таймер
-                tvStatus.text = "CONNECTED • UNLIMITED"
-            }
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("users").document(user.uid).get()
+                .addOnSuccessListener { document ->
+                    if (document.exists()) {
+                        // Сохраняем данные в переменные класса
+                        isPremiumUser = document.getBoolean("isPremium") ?: false
+                        userExpiryDate = document.getLong("subscriptionExpiry") ?: 0L
+
+                        // Если VPN включен и у юзера Премиум — обновляем интерфейс
+                        if (currentState == VpnState.CONNECTED && isPremiumUser) {
+
+                            // Дополнительная проверка: вдруг время вышло прямо сейчас?
+                            if (userExpiryDate > 0 && System.currentTimeMillis() > userExpiryDate) {
+                                disconnect() // Время вышло — отключаем
+                            } else {
+                                connectionTimer?.cancel() // Убираем таймер 1 часа
+                                tvStatus.text = "CONNECTED • UNLIMITED"
+                            }
+                        }
+                    }
+                }
+        } else {
+            // Если пользователь вышел из аккаунта
+            isPremiumUser = false
+            userExpiryDate = 0L
         }
-
-        // Статус (если он не цветной)
-        // ThemeManager.applySubTextColors(this, findViewById(R.id.tvStatus))
     }
 
     private fun handleToggle() {
@@ -344,8 +398,15 @@ class MainActivity : AppCompatActivity() {
     private fun startVpnService() {
         val intent = Intent(this, MyVpnService::class.java)
         intent.action = "START"
-        // Передаем флаг премиума
-        intent.putExtra("IS_PREMIUM", isPremiumUser)
+
+        intent.putExtra("SERVER_IP", serverIp)
+        intent.putExtra("SERVER_PORT", serverPort)
+        intent.putExtra("UUID_FREE", uuidFree)
+        intent.putExtra("UUID_PREMIUM", uuidPremium)
+
+        // ПЕРЕДАЕМ ТОЧНУЮ ДАТУ
+        intent.putExtra("EXPIRY_TIME", userExpiryDate)
+
         startService(intent)
     }
 

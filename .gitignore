@@ -27,3 +27,7 @@ local.properties
 # Папки сборки (мусор)
 /build
 /app/build
+
+*.apk
+*.aab
+/app/release/

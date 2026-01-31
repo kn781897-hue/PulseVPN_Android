@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" /> <!-- Для Android 14+ может потребоваться уточнение типа сервиса -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".App"
@@ -49,6 +50,7 @@
             android:foregroundServiceType="specialUse"
             android:permission="android.permission.BIND_VPN_SERVICE"
             tools:ignore="VpnServicePolicy">
+
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
