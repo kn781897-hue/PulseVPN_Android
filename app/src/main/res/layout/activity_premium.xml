@@ -2,252 +2,306 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/bg_nature">
+    android:layout_height="match_parent">
 
-    <!-- Темная вуаль -->
+    <!-- Global Background -->
+    <ImageView
+        android:id="@+id/ivBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/background" />
+
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#E612141D" />
+        android:background="#4D000000" />
 
-    <!-- 1. КНОПКА НАЗАД (Идентична главной кнопке меню) -->
+    <!-- Back button -->
     <ImageButton
         android:id="@+id/btnBack"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="50dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_menu"
-        android:padding="10dp"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="56dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/ic_arrow_back"
+        android:padding="8dp"
         android:scaleType="fitCenter"
-        app:tint="#FFFFFF"
+        app:tint="@color/white"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
 
-    <!-- Контент -->
+    <!-- Scroll -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:paddingBottom="20dp"
         android:scrollbars="none"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnBack"
-        app:layout_constraintVertical_bias="1.0"
-        tools:layout_editor_absoluteX="0dp">
+        app:layout_constraintTop_toBottomOf="@id/btnBack">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingHorizontal="24dp"
-            android:paddingTop="10dp">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="32dp">
 
-            <!-- Иконка (Чуть меньше для компактности) -->
-            <ImageView
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_marginBottom="10dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="12dp"
-                android:src="@android:drawable/btn_star_big_on"
-                app:tint="#FFD54F" />
+            <!-- Profile Logo with Crown -->
+            <FrameLayout
+                android:layout_width="86dp"
+                android:layout_height="86dp"
+                android:layout_marginBottom="16dp">
+
+                <!-- Profile Circle -->
+                <View
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_circle_primary" />
+
+
+                <!-- Crown better aligned with the circle -->
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="0dp"
+                    android:layout_marginEnd="0dp"
+                    android:src="@drawable/ic_crown"
+                    android:rotation="0"
+                    app:tint="#FFD700"
+                    android:elevation="12dp"/>
+            </FrameLayout>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Go Premium"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/white"
                 android:textSize="28sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
                 android:text="Unlock full speed &amp; remove ads"
-                android:textColor="#80FFFFFF"
-                android:textSize="14sp" />
+                android:textColor="#A0A0A0"
+                android:textSize="14sp"
+                android:layout_marginBottom="28dp"/>
 
-            <!-- Список преимуществ (Компактный) -->
+            <!-- Features card -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="20dp"
-                android:background="@drawable/bg_glass_item"
+                android:background="@drawable/bg_glass_card"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="20dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="6dp"
-                    android:text="⚡   Unlimited Speed"
-                    android:textColor="#FFF"
-                    android:textSize="14sp" />
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:layout_width="22dp"
+                        android:layout_height="wrap_content"
+                        android:text="⚡"
+                        android:textSize="16sp"/>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:text="Unlimited Speed"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"/>
+                </LinearLayout>
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="6dp"
-                    android:text="🚫  No Ads"
-                    android:textColor="#FFF"
-                    android:textSize="14sp" />
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:layout_width="22dp"
+                        android:layout_height="wrap_content"
+                        android:text="🚫"
+                        android:textSize="16sp"/>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:text="No Ads"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"/>
+                </LinearLayout>
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="∞   No Time Restrictions"
-                    android:textColor="#FFF"
-                    android:textSize="14sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:layout_width="22dp"
+                        android:layout_height="wrap_content"
+                        android:text="∞"
+                        android:textSize="16sp"
+                        android:textColor="#00E5FF"/>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:text="No Time Restrictions"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"/>
+                </LinearLayout>
+
             </LinearLayout>
 
-
-            <!-- ТАРИФ 1: 1 Месяц (Высота 64dp) -->
+            <!-- PLAN 1: 1 Month -->
             <LinearLayout
                 android:id="@+id/plan1"
                 android:layout_width="match_parent"
-                android:layout_height="64dp"
+                android:layout_height="68dp"
                 android:layout_marginBottom="8dp"
-                android:background="@drawable/bg_glass_item"
+                android:background="@drawable/bg_glass_card"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp">
 
-                <!-- Название слева -->
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="1 Month"
-                    android:textColor="#FFF"
+                    android:textColor="@color/white"
                     android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"/>
 
-                <!-- Цена справа -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="199 ₽"
-                    android:textColor="#FFF"
+                    android:textColor="@color/white"
                     android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"/>
             </LinearLayout>
 
-            <!-- ТАРИФ 2: 3 Месяца (Высота 64dp) -->
+            <!-- PLAN 2: 3 Months -->
             <LinearLayout
                 android:id="@+id/plan3"
                 android:layout_width="match_parent"
-                android:layout_height="64dp"
+                android:layout_height="68dp"
                 android:layout_marginBottom="8dp"
-                android:background="@drawable/bg_glass_item"
+                android:background="@drawable/bg_glass_card"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp">
 
-                <!-- Название слева -->
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="3 Months"
-                    android:textColor="#FFF"
+                    android:textColor="@color/white"
                     android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"/>
 
-                <!-- Блок справа: Цена + Скидка -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="end"
                     android:orientation="vertical">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="499 ₽"
-                        android:textColor="#FFF"
+                        android:textColor="@color/white"
                         android:textSize="18sp"
-                        android:textStyle="bold" />
-
+                        android:textStyle="bold"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Save 15%"
-                        android:textColor="#FFD54F"
-                        android:textSize="10sp"
-                        android:textStyle="bold" />
+                        android:textColor="#00E5FF"
+                        android:textSize="11sp"
+                        android:textStyle="bold"/>
                 </LinearLayout>
+
             </LinearLayout>
 
-            <!-- ТАРИФ 3: 12 Месяцев (Высота 64dp) -->
+            <!-- PLAN 3: 1 Year (default selected) -->
             <LinearLayout
                 android:id="@+id/plan12"
                 android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:background="@drawable/bg_glass_selected"
+                android:layout_height="68dp"
+                android:background="@drawable/bg_glass_card_selected"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp">
 
-                <!-- Название слева -->
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="1 Year"
-                    android:textColor="#FFF"
+                    android:textColor="@color/white"
                     android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"/>
 
-                <!-- Блок справа: Цена + Скидка -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="end"
                     android:orientation="vertical">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="1490 ₽"
-                        android:textColor="#FFD54F"
+                        android:textColor="#00E5FF"
                         android:textSize="18sp"
-                        android:textStyle="bold" />
-
+                        android:textStyle="bold"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Best Value (-40%)"
-                        android:textColor="#FFD54F"
-                        android:textSize="10sp"
-                        android:textStyle="bold" />
+                        android:text="Best Value (−40%)"
+                        android:textColor="#00E5FF"
+                        android:textSize="11sp"
+                        android:textStyle="bold"/>
                 </LinearLayout>
+
             </LinearLayout>
 
-            <!-- Кнопка Купить -->
+            <!-- Subscribe Button -->
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnBuy"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:layout_marginTop="24dp"
-                android:background="@drawable/bg_button_gold"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/bg_glass_btn_primary"
                 android:text="SUBSCRIBE NOW"
-                android:textColor="#12141D"
+                android:textColor="@color/white"
                 android:textSize="16sp"
-                android:elevation="50dp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:letterSpacing="0.05"/>
 
         </LinearLayout>
     </ScrollView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

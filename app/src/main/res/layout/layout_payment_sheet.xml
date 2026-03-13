@@ -8,131 +8,132 @@
     android:paddingHorizontal="24dp"
     android:paddingBottom="40dp">
 
-    <!-- Язычок (Drag Handle) -->
+    <!-- Handle bar at the top -->
     <View
         android:layout_width="40dp"
         android:layout_height="4dp"
-        android:layout_gravity="center"
+        android:layout_gravity="center_horizontal"
         android:layout_marginTop="12dp"
-        android:layout_marginBottom="24dp"
-        android:background="#30FFFFFF"
-        android:backgroundTint="#40FFFFFF" />
-    <!-- (Используем любой закругленный фон для язычка) -->
+        android:background="#33FFFFFF"
+        android:backgroundTint="#33FFFFFF" />
 
-    <!-- Заголовок -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Payment Method"
-        android:textColor="#FFFFFF"
+        android:text="Select Payment"
+        android:textColor="@color/white"
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_gravity="center"
-        android:layout_marginBottom="30dp"/>
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="32dp"
+        android:letterSpacing="0.01"/>
 
-    <!-- Кнопка 1: ЮMoney / Карта -->
-    <LinearLayout
+    <!-- Кнопка 1: Bank Card -->
+    <RelativeLayout
         android:id="@+id/btnPayYoo"
         android:layout_width="match_parent"
-        android:layout_height="70dp"
-        android:background="@drawable/bg_glass_item"
+        android:layout_height="72dp"
+        android:background="@drawable/bg_glass_card"
         android:clickable="true"
         android:focusable="true"
-        android:gravity="center_vertical"
         android:paddingHorizontal="20dp"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="12dp">
 
-        <!-- Иконка Карты -->
         <ImageView
+            android:id="@+id/icCard"
             android:layout_width="28dp"
             android:layout_height="28dp"
+            android:layout_centerVertical="true"
             android:src="@drawable/ic_card"
-            app:tint="#FFFFFF"/>
+            app:tint="@color/white"/>
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@id/icCard"
             android:layout_marginStart="16dp"
             android:orientation="vertical">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Bank Card / YooMoney"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
+                android:text="Bank Card"
+                android:textColor="@color/white"
+                android:textSize="17sp"
                 android:textStyle="bold"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Instant activation"
-                android:textColor="#80FFFFFF"
-                android:textSize="12sp"/>
+                android:text="YooKassa secure payment"
+                android:textColor="#99FFFFFF"
+                android:textSize="13sp"/>
         </LinearLayout>
 
-        <!-- Стрелочка -->
         <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:src="@drawable/ic_settings"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:src="@drawable/ic_arrow_back"
             android:rotation="180"
-            app:tint="#40FFFFFF"/>
-    </LinearLayout>
+            app:tint="#4DFFFFFF"/>
+    </RelativeLayout>
 
-
-    <!-- ... После btnPayYoo ... -->
-
-    <!-- Кнопка 2: СБП (SBP) -->
-    <LinearLayout
+    <!-- Кнопка 2: SBP -->
+    <RelativeLayout
         android:id="@+id/btnPaySbp"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:background="@drawable/bg_glass_item"
+        android:layout_height="72dp"
+        android:background="@drawable/bg_glass_card"
         android:clickable="true"
         android:focusable="true"
-        android:gravity="center_vertical"
         android:paddingHorizontal="20dp"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="12dp">
 
         <ImageView
+            android:id="@+id/icSbp"
             android:layout_width="28dp"
             android:layout_height="28dp"
+            android:layout_centerVertical="true"
             android:src="@drawable/ic_sbp"
-            app:tint="#FFFFFF"/> <!-- Или уберите tint, если иконка цветная -->
+            app:tint="@color/white"/>
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@id/icSbp"
             android:layout_marginStart="16dp"
             android:orientation="vertical">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="SBP (Fast Payment)"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
+                android:text="SBP Payment"
+                android:textColor="@color/white"
+                android:textSize="17sp"
                 android:textStyle="bold"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sberbank, Tinkoff, VTB"
-                android:textColor="#80FFFFFF"
-                android:textSize="12sp"/>
+                android:text="Fast instant transfer"
+                android:textColor="#99FFFFFF"
+                android:textSize="13sp"/>
         </LinearLayout>
 
-        <!-- Стрелочка -->
         <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:src="@drawable/ic_settings"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:src="@drawable/ic_arrow_back"
             android:rotation="180"
-            app:tint="#40FFFFFF"/>
-    </LinearLayout>
+            app:tint="#4DFFFFFF"/>
+    </RelativeLayout>
 
     <!-- ... Перед btnPayCrypto ... -->
 

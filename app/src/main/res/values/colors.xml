@@ -2,4 +2,36 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- macOS Dark Background System -->
+    <color name="colorBackground">#0D0D14</color>
+    <color name="colorSurface">#1A1A28</color>
+    <color name="colorSurfaceElevated">#232336</color>
+    <color name="colorSurfaceHigh">#2C2C44</color>
+
+    <!-- macOS Accent Colors -->
+    <color name="colorAccent">#5E5CE6</color>
+    <color name="colorAccentSecondary">#32D74B</color>
+    <color name="colorAccentGreen">#34C759</color>
+    <color name="colorAccentRed">#FF453A</color>
+    <color name="colorAccentYellow">#FFD60A</color>
+    <color name="colorAccentOrange">#FF9F0A</color>
+
+    <!-- macOS Text Colors -->
+    <color name="colorTextPrimary">#FFFFFF</color>
+    <color name="colorTextSecondary">#8E8EA0</color>
+    <color name="colorTextTertiary">#48485A</color>
+    <color name="colorTextAccent">#5E5CE6</color>
+
+    <!-- macOS Separator -->
+    <color name="colorSeparator">#2C2C44</color>
+
+    <!-- macOS Glass / translucent -->
+    <color name="colorGlass">#201A1A28</color>
+    <color name="colorGlassBorder">#30FFFFFF</color>
+
+    <!-- Connection States -->
+    <color name="colorConnected">#34C759</color>
+    <color name="colorConnecting">#5E5CE6</color>
+    <color name="colorDisconnected">#8E8EA0</color>
 </resources>

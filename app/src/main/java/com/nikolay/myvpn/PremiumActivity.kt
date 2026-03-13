@@ -2,10 +2,14 @@ package com.nikolay.myvpn
 
 import android.content.Intent
 import android.net.Uri
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.core.view.WindowCompat
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.firebase.auth.FirebaseAuth
@@ -36,6 +40,22 @@ class PremiumActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // --- TRANSPARENCY SETUP ---
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        )
+        // --------------------------
+
         setContentView(R.layout.activity_premium)
 
         findViewById<View>(R.id.btnBack).setOnClickListener {
@@ -63,8 +83,8 @@ class PremiumActivity : AppCompatActivity() {
 
     private fun selectPlan(months: Int, priceRub: Int) {
         // Сброс фона
-        val bgNormal = R.drawable.bg_glass_item
-        val bgSelected = R.drawable.bg_glass_selected
+        val bgNormal = R.drawable.bg_glass_card
+        val bgSelected = R.drawable.bg_glass_card_selected
 
         plan1.setBackgroundResource(bgNormal)
         plan3.setBackgroundResource(bgNormal)

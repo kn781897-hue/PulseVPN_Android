@@ -119,13 +119,17 @@ class MyVpnService : VpnService() {
     // ===================== STOP =====================
 
     private fun stopVpn() {
+        Log.d(TAG, "Stopping VPN service gracefully")
         stopInternal()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
 
-        // ❗ КЛЮЧЕВОЕ МЕСТО ❗
-        // tun2socks AAR нельзя перезапускать — убиваем процесс
-        android.os.Process.killProcess(android.os.Process.myPid())
+        // ❗ Чтобы избежать Segmentation Fault в нативной библиотеке tun2socks
+        // и полностью освободить ресурсы, завершаем процесс сервиса с кодом 0.
+        // Так как сервис в отдельном процессе (:vpn), это не затронет основное приложение.
+        Handler(Looper.getMainLooper()).postDelayed({
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }, 500)
     }
 
     private fun stopInternal() {
@@ -135,6 +139,7 @@ class MyVpnService : VpnService() {
         }
 
         try {
+            Log.d(TAG, "Stopping v2ray core")
             coreController?.stopLoop()
             coreController = null
         } catch (e: Exception) {
@@ -142,6 +147,7 @@ class MyVpnService : VpnService() {
         }
 
         try {
+            Log.d(TAG, "Closing VPN interface")
             vpnInterface?.close()   // ← закрытие TUN восстанавливает интернет
             vpnInterface = null
         } catch (e: Exception) {

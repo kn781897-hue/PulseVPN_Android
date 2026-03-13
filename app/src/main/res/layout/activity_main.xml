@@ -4,118 +4,96 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_nature">
+    android:background="@color/black"
+    android:fitsSystemWindows="false">
 
-    <!-- КНОПКА МЕНЮ (Слева) -->
-    <ImageButton
-        android:id="@+id/btnMenu"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="50dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_menu"
-        android:padding="10dp"
-        android:scaleType="fitCenter"
-        app:tint="#FFFFFF"
-        app:layout_constraintStart_toStartOf="parent"
+    <!-- Here you can apply the custom photo background -->
+    <ImageView
+        android:id="@+id/ivDynamicBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/background"
         app:layout_constraintTop_toTopOf="parent"
-        android:contentDescription="Menu"/>
-
-    <!-- КНОПКА НАСТРОЙКИ (Справа) -->
-    <ImageButton
-        android:id="@+id/btnSettings"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginTop="50dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_settings"
-        android:padding="10dp"
-        android:scaleType="fitCenter"
-        app:tint="#FFFFFF"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:contentDescription="Settings"/>
-
-    <TextView
-        android:id="@+id/tvAppName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
-        android:text="PULSE VPN"
-        android:textColor="#FFFFFF"
-        android:textSize="20sp"
-        android:letterSpacing="0.2"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- STATIC TOP HEADER -->
+    <LinearLayout
+        android:id="@+id/llWindowHeader"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginTop="32dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toTopOf="parent">
+        <TextView
+            android:id="@+id/tvHeaderTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PULSE VPN"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/topNavBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginHorizontal="20dp"
+        android:background="@drawable/bg_glass_switcher"
+        android:orientation="horizontal"
+        android:padding="4dp"
+        app:layout_constraintTop_toBottomOf="@id/llWindowHeader">
+        <ImageButton
+            android:id="@+id/navDash"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_glass_active_pill"
+            android:src="@drawable/ic_sync_vector"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            app:tint="@color/colorAccent" />
+        <ImageButton
+            android:id="@+id/navSettings"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:layout_marginStart="4dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_settings"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            app:tint="@color/colorTextSecondary" />
+        <ImageButton
+            android:id="@+id/navProfile"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:layout_marginStart="4dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_profile"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            app:tint="@color/colorTextSecondary" />
+    </LinearLayout>
 
     <FrameLayout
-        android:id="@+id/flButtonContainer"
-        android:layout_width="260dp"
-        android:layout_height="260dp"
+        android:id="@+id/contentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toBottomOf="@id/topNavBar">
 
-        <!-- СЛОЙ 1: КНОПКА (Стеклянная) -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/btnMain"
-            android:layout_width="160dp"
-            android:layout_height="160dp"
-            android:layout_gravity="center"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?android:attr/selectableItemBackground"
-            app:cardBackgroundColor="#990F1520"
-            app:cardCornerRadius="80dp"
-            app:cardElevation="0dp"
-            android:contentDescription="Connect Button">
-
-            <ImageView
-                android:id="@+id/ivIcon"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center"
-                android:src="@android:drawable/ic_lock_power_off"
-                app:tint="#FFFFFF" />
-
-            <!-- Блик -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="#10FFFFFF"/>
-
-        </androidx.cardview.widget.CardView>
-
-        <!-- СЛОЙ 2: КОМЕТА (Поверх кнопки) -->
-        <ImageView
-            android:id="@+id/ivLoadingRing"
-            android:layout_width="240dp"
-            android:layout_height="240dp"
-            android:layout_gravity="center"
-            android:src="@drawable/loader_comet"
-            android:rotation="90"
-            android:elevation="10dp"
-            android:visibility="invisible" />
+        <include layout="@layout/layout_tab_dashboard" android:id="@+id/tabDashboard" />
+        <include layout="@layout/layout_tab_settings" android:id="@+id/tabSettings" android:visibility="gone" />
+        <include layout="@layout/layout_tab_profile" android:id="@+id/tabProfile" android:visibility="gone" />
 
     </FrameLayout>
-
-    <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="45dp"
-        android:letterSpacing="0.1"
-        android:text="TAP TO CONNECT"
-        android:textColor="#CCFFFFFF"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/flButtonContainer" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>
