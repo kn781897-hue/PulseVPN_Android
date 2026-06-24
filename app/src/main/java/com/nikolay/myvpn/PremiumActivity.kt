@@ -31,11 +31,8 @@ class PremiumActivity : AppCompatActivity() {
 
     private var lastClickTime: Long = 0
 
-    // !!! ВАЖНО: ВСТАВЬТЕ СЮДА IP ВАШЕГО СЕРВЕРА !!!
-    // Например: "http://31.58.87.8:3000/create-payment"
     private val SERVER_URL = "https://unpulverable-hosea-zealous.ngrok-free.dev/create-payment"
 
-    // Ссылка на крипто-оплату
     private val CRYPTO_LINK = "https://t.me/nikolay_support"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,7 +64,7 @@ class PremiumActivity : AppCompatActivity() {
         plan3 = findViewById(R.id.plan3)
         plan12 = findViewById(R.id.plan12)
 
-        // === ВЫБОР ТАРИФА ===
+        // выбор тарифа
         plan1.setOnClickListener { selectPlan(1, 199) }   // 199 руб
         plan3.setOnClickListener { selectPlan(3, 499) }   // 499 руб
         plan12.setOnClickListener { selectPlan(12, 1490) } // 1490 руб
@@ -127,7 +124,7 @@ class PremiumActivity : AppCompatActivity() {
             // Шлем "bank_card"
             createPaymentOnServer("bank_card")
         }
-        // 2. Оплата СБП (Ведет туда же, так как ЮКасса сама дает выбор)
+        // 2. Оплата СБП 
         view.findViewById<View>(R.id.btnPaySbp)?.setOnClickListener {
             dialog.dismiss()
             // Шлем "sbp"
@@ -142,12 +139,11 @@ class PremiumActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    // === НОВЫЙ МЕТОД: ЗАПРОС К СЕРВЕРУ ===
-    // Аргумент: "sbp" или "bank_card"
+    // запрос к серверу
     private fun createPaymentOnServer(paymentMethod: String) {
         val user = FirebaseAuth.getInstance().currentUser ?: return
 
-        // Форматируем цену (199.00)
+        // Форматируем цену
         val amountString = String.format(java.util.Locale.US, "%.2f", selectedAmount.toDouble())
 
         Toast.makeText(this, "Creating payment...", Toast.LENGTH_SHORT).show()
@@ -158,7 +154,7 @@ class PremiumActivity : AppCompatActivity() {
         jsonBody.put("amount", amountString)
         jsonBody.put("userId", user.uid)
 
-        // === ОТПРАВЛЯЕМ МЕТОД ОПЛАТЫ ===
+        // отправляем метод оплаты
         jsonBody.put("method", paymentMethod)
         // ================================
 
