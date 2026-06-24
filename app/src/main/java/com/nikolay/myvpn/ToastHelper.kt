@@ -19,14 +19,12 @@ object ToastHelper {
         val inflater = LayoutInflater.from(context)
         val layout = inflater.inflate(R.layout.layout_toast, null)
 
-        // Находим элементы
         val tvMessage = layout.findViewById<TextView>(R.id.tvToastMessage)
         val ivIcon = layout.findViewById<ImageView>(R.id.ivToastIcon)
 
-        // Устанавливаем текст
         tvMessage.text = message
 
-        // Настраиваем цвета и иконки
+        // цвета и иконки
         when (type) {
             Type.SUCCESS -> {
                 // Зеленый
@@ -34,7 +32,7 @@ object ToastHelper {
                 ivIcon.setColorFilter(Color.parseColor("#4CAF50"))
             }
             Type.ERROR -> {
-                // Красный (нужна иконка ошибки, или используем info)
+                // Красный 
                 ivIcon.setImageResource(android.R.drawable.stat_notify_error)
                 ivIcon.setColorFilter(Color.parseColor("#F44336"))
             }
@@ -45,12 +43,10 @@ object ToastHelper {
             }
         }
 
-        // Создаем и показываем Тост
         val toast = Toast(context)
         toast.duration = Toast.LENGTH_SHORT
         toast.view = layout
 
-        // Позиция: Снизу, немного отступив от края (как в iOS)
         toast.setGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, 150)
 
         toast.show()
