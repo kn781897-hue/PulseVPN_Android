@@ -16,8 +16,8 @@ object AdManager {
     private var interstitialAd: InterstitialAd? = null
     private var loader: InterstitialAdLoader? = null
 
-    // Тестовый ID для межстраничной рекламы (Demo)
-    // В релизе замените на свой реальный ID из кабинета Яндекса!
+    // тест
+
     private const val AD_UNIT_ID = "R-M-DEMO-interstitial"
 
     fun loadAd(context: Activity) {
@@ -37,7 +37,6 @@ object AdManager {
             })
         }
 
-        // === ГЛАВНОЕ ИЗМЕНЕНИЕ ДЛЯ SDK v7+ ===
         // Создаем конфигурацию запроса
         val adRequestConfiguration = AdRequestConfiguration.Builder(AD_UNIT_ID).build()
 
@@ -81,7 +80,7 @@ object AdManager {
             // Если реклама еще не загрузилась
             Log.d("YandexAds", "Ad not ready yet, skipping")
             onAdClosed()
-            // Пробуем загрузить на следующий раз
+
             loadAd(activity)
         }
     }
