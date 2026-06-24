@@ -9,7 +9,7 @@ object SubscriptionManager {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    // Проверка статуса (вызывать при старте приложения)
+    // Проверка статуса 
     fun checkSubscriptionStatus(onComplete: (isPremium: Boolean) -> Unit) {
         val user = auth.currentUser
         if (user == null) {
@@ -41,11 +41,11 @@ object SubscriptionManager {
             }
     }
 
-    // Активация премиума (вызывать после оплаты)
+    // Активация премиума
     fun activatePremium(months: Int, onSuccess: () -> Unit) {
         val user = auth.currentUser ?: return
 
-        // Вычисляем новую дату (текущее время + кол-во месяцев в миллисекундах)
+        // Вычисляем новую дату
         val millisInMonth = 2592000000L // 30 дней
         val newExpiryDate = System.currentTimeMillis() + (months * millisInMonth)
 
@@ -55,7 +55,7 @@ object SubscriptionManager {
             "email" to user.email
         )
 
-        // Сохраняем в базу (merge = true, чтобы не стереть другие поля, если будут)
+        // Сохраняем в базу 
         db.collection("users").document(user.uid)
             .set(data, SetOptions.merge())
             .addOnSuccessListener {
