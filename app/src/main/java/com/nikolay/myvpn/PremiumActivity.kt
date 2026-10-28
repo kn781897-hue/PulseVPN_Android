@@ -2,10 +2,13 @@ package com.nikolay.myvpn
 
 import android.content.Intent
 import android.net.Uri
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import android.widget.LinearLayout
-import android.widget.Toast
+import androidx.core.view.WindowCompat
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.firebase.auth.FirebaseAuth
@@ -14,6 +17,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class PremiumActivity : AppCompatActivity() {
 
@@ -21,21 +25,30 @@ class PremiumActivity : AppCompatActivity() {
     private lateinit var plan3: LinearLayout
     private lateinit var plan12: LinearLayout
 
-    // По умолчанию 1 год
+    // По умолчанию 1 год (1490 руб)
     private var selectedAmount = 1490
-    private var selectedPeriod = "1 Year"
+    private var selectedPeriod = "1 Год"
 
     private var lastClickTime: Long = 0
 
-    // !!! ВАЖНО: ВСТАВЬТЕ СЮДА IP ВАШЕГО СЕРВЕРА !!!
-    // Например: "http://31.58.87.8:3000/create-payment"
-    private val SERVER_URL = "https://unpulverable-hosea-zealous.ngrok-free.dev/create-payment"
-
-    // Ссылка на крипто-оплату
-    private val CRYPTO_LINK = "https://t.me/nikolay_support"
+    private val SERVER_URL = "https://pulsevpn.shop/create-payment"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        )
+
         setContentView(R.layout.activity_premium)
 
         findViewById<View>(R.id.btnBack).setOnClickListener {
@@ -47,13 +60,12 @@ class PremiumActivity : AppCompatActivity() {
         plan3 = findViewById(R.id.plan3)
         plan12 = findViewById(R.id.plan12)
 
-        // === ВЫБОР ТАРИФА ===
-        plan1.setOnClickListener { selectPlan(1, 199) }   // 199 руб
-        plan3.setOnClickListener { selectPlan(3, 499) }   // 499 руб
-        plan12.setOnClickListener { selectPlan(12, 1490) } // 1490 руб
+        // Выбор тарифа
+        plan1.setOnClickListener { selectPlan(1, 199) }
+        plan3.setOnClickListener { selectPlan(3, 499) }
+        plan12.setOnClickListener { selectPlan(12, 1490) }
 
         findViewById<View>(R.id.btnBuy).setOnClickListener {
-            // Защита от двойного нажатия
             if (System.currentTimeMillis() - lastClickTime < 1000) return@setOnClickListener
             lastClickTime = System.currentTimeMillis()
 
@@ -62,9 +74,8 @@ class PremiumActivity : AppCompatActivity() {
     }
 
     private fun selectPlan(months: Int, priceRub: Int) {
-        // Сброс фона
-        val bgNormal = R.drawable.bg_glass_item
-        val bgSelected = R.drawable.bg_glass_selected
+        val bgNormal = R.drawable.bg_glass_card
+        val bgSelected = R.drawable.bg_glass_card_selected
 
         plan1.setBackgroundResource(bgNormal)
         plan3.setBackgroundResource(bgNormal)
@@ -77,18 +88,12 @@ class PremiumActivity : AppCompatActivity() {
         }
 
         selectedAmount = priceRub
-        selectedPeriod = if (months == 12) "1 Year" else "$months Months"
+        selectedPeriod = if (months == 12) "1 Год" else "$months Месяца"
     }
 
     private fun checkLoginAndPay() {
-        val user = FirebaseAuth.getInstance().currentUser
-        if (user == null) {
-            ToastHelper.show(this, "Please Log In first", ToastHelper.Type.INFO)
-            startActivity(Intent(this, AuthActivity::class.java))
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-        } else {
-            showPaymentDialog()
-        }
+        // Поддерживаем оплату для Firebase Email, Telegram-пользователей и гостевых устройств
+        showPaymentDialog()
     }
 
     private fun showPaymentDialog() {
@@ -99,48 +104,49 @@ class PremiumActivity : AppCompatActivity() {
 
         // Прозрачный фон шторки
         dialog.window?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-            ?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            ?.setBackgroundColor(Color.TRANSPARENT)
 
-        // 1. Оплата ЮMoney / Карта
+        // 1. Оплата картой / ЮKassa
         view.findViewById<View>(R.id.btnPayYoo).setOnClickListener {
             dialog.dismiss()
-            // Шлем "bank_card"
             createPaymentOnServer("bank_card")
         }
-        // 2. Оплата СБП (Ведет туда же, так как ЮКасса сама дает выбор)
+
+        // 2. Оплата СБП
         view.findViewById<View>(R.id.btnPaySbp)?.setOnClickListener {
             dialog.dismiss()
-            // Шлем "sbp"
             createPaymentOnServer("sbp")
         }
 
-        // 3. Оплата Криптой
-        //view.findViewById<View>(R.id.btnPayCrypto).setOnClickListener {
-        //    dialog.dismiss()
-        //    payWithCrypto()
-        //}
         dialog.show()
     }
 
-    // === НОВЫЙ МЕТОД: ЗАПРОС К СЕРВЕРУ ===
-    // Аргумент: "sbp" или "bank_card"
     private fun createPaymentOnServer(paymentMethod: String) {
-        val user = FirebaseAuth.getInstance().currentUser ?: return
+        val user = FirebaseAuth.getInstance().currentUser
+        val tgKey = SubscriptionManager.getSavedTelegramKey(this)
+        val tgUsername = SubscriptionManager.getTelegramUsername(this)
+        val deviceId = SubscriptionManager.getDeviceId(this)
 
-        // Форматируем цену (199.00)
+        val effectiveUserId = user?.uid
+            ?: (if (!tgKey.isNullOrBlank()) tgKey else if (!tgUsername.isNullOrBlank()) "tg_$tgUsername" else "dev_$deviceId")
+
         val amountString = String.format(java.util.Locale.US, "%.2f", selectedAmount.toDouble())
 
-        Toast.makeText(this, "Creating payment...", Toast.LENGTH_SHORT).show()
+        ToastHelper.show(this, "Создание счета на оплату...", ToastHelper.Type.INFO)
 
-        val client = OkHttpClient()
+        val client = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .build()
 
-        val jsonBody = JSONObject()
-        jsonBody.put("amount", amountString)
-        jsonBody.put("userId", user.uid)
-
-        // === ОТПРАВЛЯЕМ МЕТОД ОПЛАТЫ ===
-        jsonBody.put("method", paymentMethod)
-        // ================================
+        val jsonBody = JSONObject().apply {
+            put("amount", amountString)
+            put("userId", effectiveUserId)
+            put("deviceId", deviceId)
+            if (!tgUsername.isNullOrBlank()) put("telegramUsername", tgUsername)
+            if (!tgKey.isNullOrBlank()) put("telegramKey", tgKey)
+            put("method", paymentMethod)
+        }
 
         val body = jsonBody.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
 
@@ -152,7 +158,7 @@ class PremiumActivity : AppCompatActivity() {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 runOnUiThread {
-                    ToastHelper.show(this@PremiumActivity, "Error: ${e.message}", ToastHelper.Type.ERROR)
+                    ToastHelper.show(this@PremiumActivity, "Ошибка сети: ${e.message}", ToastHelper.Type.ERROR)
                 }
             }
 
@@ -164,25 +170,20 @@ class PremiumActivity : AppCompatActivity() {
                         val confirmationUrl = json.getString("confirmation_url")
 
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(confirmationUrl))
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         startActivity(intent)
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        runOnUiThread {
+                            ToastHelper.show(this@PremiumActivity, "Не удалось открыть браузер", ToastHelper.Type.ERROR)
+                        }
                     }
                 } else {
                     runOnUiThread {
-                        ToastHelper.show(this@PremiumActivity, "Server Error", ToastHelper.Type.ERROR)
+                        ToastHelper.show(this@PremiumActivity, "Ошибка сервера платежей", ToastHelper.Type.ERROR)
                     }
                 }
             }
         })
     }
-
-    //private fun payWithCrypto() {
-    //    try {
-    //        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(CRYPTO_LINK))
-    //        startActivity(intent)
-    //    } catch (e: Exception) {
-    //        ToastHelper.show(this, "Browser not found", ToastHelper.Type.ERROR)
-    //    }
-    //}
 }

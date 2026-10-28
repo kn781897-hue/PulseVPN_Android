@@ -17,7 +17,8 @@ object GlassDialog {
         message: String,
         iconRes: Int = R.drawable.ic_info,
         positiveText: String = "OK",
-        negativeText: String? = null, // Если null - кнопки "Отмена" не будет
+        negativeText: String? = null, // Опциональный текст для кнопки "Отмена"
+        onNegativeClick: () -> Unit = {},
         onPositiveClick: () -> Unit = {}
     ) {
         val view = LayoutInflater.from(context).inflate(R.layout.layout_glass_dialog, null)
@@ -27,10 +28,9 @@ object GlassDialog {
             .setCancelable(true)
             .create()
 
-        // Прозрачный фон самого окна (чтобы видны были закругления)
+        // Установка прозрачного фона окна для корректного отображения скругленных углов
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        // Находим элементы
         val ivIcon = view.findViewById<ImageView>(R.id.ivDialogIcon)
         val tvTitle = view.findViewById<TextView>(R.id.tvDialogTitle)
         val tvMessage = view.findViewById<TextView>(R.id.tvDialogMessage)
@@ -38,23 +38,24 @@ object GlassDialog {
         val btnNegative = view.findViewById<TextView>(R.id.btnNegative)
         val btnPosText = btnPositive as TextView // Кастим для смены текста
 
-        // Устанавливаем данные
         ivIcon.setImageResource(iconRes)
         tvTitle.text = title
         tvMessage.text = message
         btnPosText.text = positiveText
 
-        // Клик OK
         btnPositive.setOnClickListener {
             dialog.dismiss()
             onPositiveClick()
         }
 
-        // Кнопка Отмена (показываем только если нужен текст)
+        // Настройка кнопки отмены
         if (negativeText != null) {
             btnNegative.visibility = View.VISIBLE
             btnNegative.text = negativeText
-            btnNegative.setOnClickListener { dialog.dismiss() }
+            btnNegative.setOnClickListener {
+                dialog.dismiss()
+                onNegativeClick()
+            }
         } else {
             btnNegative.visibility = View.GONE
         }

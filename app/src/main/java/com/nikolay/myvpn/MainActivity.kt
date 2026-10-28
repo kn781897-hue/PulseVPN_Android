@@ -1,446 +1,698 @@
 package com.nikolay.myvpn
 
-import android.animation.ObjectAnimator
+import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.net.TrafficStats
+import android.net.Uri
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.view.animation.LinearInterpolator
+import android.view.WindowManager
+import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.cardview.widget.CardView
-import android.view.animation.AccelerateDecelerateInterpolator
-import android.animation.Keyframe
-import android.animation.PropertyValuesHolder
-import android.os.CountDownTimer
+import androidx.core.view.WindowCompat
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-
-import com.google.firebase.database.database
-
-import com.google.firebase.Firebase
-import android.util.Log
-import android.widget.ImageButton
-import com.google.firebase.database.ktx.database
-
-
-import android.widget.Button
-
+import com.google.firebase.database.FirebaseDatabase
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
 
-    private var serverIp = "31.58.87.8"
+    // Основные параметры подключения к новому серверу
+    private var serverIp = "217.60.249.186"
     private var serverPort = 80
-    private var uuidFree = "default-free-uuid"
-    private var uuidPremium = "default-premium-uuid"
-
     private var currentState = VpnState.DISCONNECTED
     private enum class VpnState { DISCONNECTED, CONNECTING, CONNECTED }
-
-    private lateinit var btnMain: CardView
-    private lateinit var ivIcon: ImageView
-    private lateinit var ivLoadingRing: ImageView
-    private lateinit var tvStatus: TextView
-
-    private lateinit var btnMenu: ImageButton
-
-    private lateinit var btnSettings: ImageButton
-
-    // Переменная, хранящая статус
     private var isPremiumUser = false
+    private var isCheckingSubscription = false
+    private var connectionTimer: CountDownTimer? = null
 
-    private var userExpiryDate: Long = 0 // Храним дату окончания
+    // Приемник изменения состояния VPN от сервиса
+    private val vpnReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            runOnUiThread {
+                syncVpnState()
+            }
+        }
+    }
 
-    // Аниматоры
-    private var rotateAnimator: ObjectAnimator? = null    // Для кометы
-    private var hourglassAnimator: ObjectAnimator? = null // Для песочных часов
+    // UI вкладки
+    private lateinit var tabDashboard: View
+    private lateinit var tabSettings: View
+    private lateinit var tabProfile: View
+    private var currentTab = 0 // 0=Dash, 1=Settings, 2=Profile
+
+    private lateinit var tvHeaderTitle: TextView
+    private lateinit var navDash: ImageButton
+    private lateinit var navSettings: ImageButton
+    private lateinit var navProfile: ImageButton
+
+    // Dashboard UI
+    private lateinit var btnMain: android.widget.FrameLayout
+    private lateinit var ivPower: ImageView
+    private lateinit var tvStatus: TextView
+    private lateinit var tvTimer: TextView
+    private lateinit var tvIpProto: TextView
+
+    // Settings UI
+    private lateinit var tvDownload: TextView
+    private lateinit var tvUpload: TextView
+    private lateinit var tvPing: TextView
+    private lateinit var topGraph: TrafficGraphView
+    private val handler = Handler(Looper.getMainLooper())
+    private var isUpdatingStats = false
+    private var lastRxBytes = 0L
+    private var lastTxBytes = 0L
 
     // Цвета
-    private val colorSun = Color.parseColor("#FFD54F")
-    private val colorGlassDark = Color.parseColor("#990F1520")
-    private val colorTextWhite = Color.parseColor("#CCFFFFFF")
+    private val colorAccent = Color.parseColor("#5E5CE6")
+    private val colorGreen = Color.parseColor("#0A84FF")
+    private val colorCyan = Color.parseColor("#00E5FF")
+    private val colorInactive = Color.parseColor("#8E8EA0")
+    private val tabActiveBg = R.drawable.bg_glass_active_pill
+    private val tabInactiveBg = android.R.color.transparent
 
-    // Специальный лаунчер для обработки результата системного окна
     private val vpnPermissionLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            // Пользователь нажал "ОК" -> Запускаем!
-            startVpnService()
-        } else {
-            // Пользователь нажал "Отмена" -> Сбрасываем UI
-            disconnect()
-        }
+        if (result.resultCode == RESULT_OK) startVpnService() else disconnect()
     }
-
-    private var connectionTimer: CountDownTimer? = null
-
-    // Время сессии (1 час в миллисекундах)
-    private val SESSION_TIME_MS = 3600000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        )
+
         setContentView(R.layout.activity_main)
 
-        fetchServerConfig()
+        tvHeaderTitle = findViewById(R.id.tvHeaderTitle)
+        navDash = findViewById(R.id.navDash)
+        navSettings = findViewById(R.id.navSettings)
+        navProfile = findViewById(R.id.navProfile)
 
-        SessionManager.expireSession(this)//Надо будет удалить
+        tabDashboard = findViewById(R.id.tabDashboard)
+        tabSettings = findViewById(R.id.tabSettings)
+        tabProfile = findViewById(R.id.tabProfile)
 
-        SubscriptionManager.checkSubscriptionStatus { isPremium ->
+        initDashboard()
+        initSettings()
+        initProfile()
+
+        navDash.setOnClickListener { switchTab(0) }
+        navSettings.setOnClickListener { switchTab(1) }
+        navProfile.setOnClickListener { switchTab(2) }
+
+        // Инициализируем 1-часовой триал для новых пользователей
+        SessionManager.startTrialIfNeeded(this)
+
+        // Инициализируем кэшированное состояние премиума мгновенно
+        isPremiumUser = SubscriptionManager.isCachedPremium(this)
+
+        // Регистрируем ресивер для отслеживания состояния VPN
+        val filter = android.content.IntentFilter(MyVpnService.ACTION_STATE_CHANGED)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(vpnReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(vpnReceiver, filter)
         }
 
-        btnMain = findViewById(R.id.btnMain)
-        ivIcon = findViewById(R.id.ivIcon)
-        ivLoadingRing = findViewById(R.id.ivLoadingRing)
-        tvStatus = findViewById(R.id.tvStatus)
-        btnMenu = findViewById(R.id.btnMenu)
-        btnSettings = findViewById(R.id.btnSettings)
+        // Синхронизируем текущее состояние подключения
+        syncVpnState()
 
-        AdManager.loadAd(this)
+        // Показываем уведомление о триале, если еще не показывалось
+        if (!SessionManager.hasShownNotice(this)) {
+            showTrialWelcomeDialog()
+            SessionManager.markNoticeShown(this)
+        }
+
+        fetchServerConfig()
+        checkPremium()
+        AppUpdateManager.checkUpdate(this, silent = true)
+    }
+
+    // Анимация переключения вкладок
+    private fun switchTab(target: Int) {
+        if (currentTab == target) return
+        val isGoingRight = target > currentTab
+
+        val currentView = when (currentTab) {
+            0 -> tabDashboard; 1 -> tabSettings; else -> tabProfile
+        }
+        val targetView = when (target) {
+            0 -> tabDashboard; 1 -> tabSettings; else -> tabProfile
+        }
+
+        currentView.animate()
+            .translationX((if (isGoingRight) -currentView.width else currentView.width).toFloat())
+            .alpha(0f)
+            .setDuration(250)
+            .withEndAction {
+                currentView.visibility = View.GONE
+                currentView.translationX = 0f
+            }.start()
+
+        targetView.visibility = View.VISIBLE
+        targetView.translationX = (if (isGoingRight) targetView.width else -targetView.width).toFloat()
+        targetView.alpha = 0f
+
+        targetView.animate()
+            .translationX(0f)
+            .alpha(1f)
+            .setDuration(250)
+            .start()
+
+        navDash.setBackgroundResource(if (target == 0) tabActiveBg else tabInactiveBg)
+        navDash.setColorFilter(if (target == 0) colorAccent else colorInactive)
+        navSettings.setBackgroundResource(if (target == 1) tabActiveBg else tabInactiveBg)
+        navSettings.setColorFilter(if (target == 1) colorAccent else colorInactive)
+        navProfile.setBackgroundResource(if (target == 2) tabActiveBg else tabInactiveBg)
+        navProfile.setColorFilter(if (target == 2) colorAccent else colorInactive)
+
+        tvHeaderTitle.text = when (target) {
+            0 -> "PULSE VPN"
+            1 -> "НАСТРОЙКИ"
+            else -> "ПРОФИЛЬ"
+        }
+
+        currentTab = target
+    }
+
+    // Дашборд
+    private fun initDashboard() {
+        btnMain = findViewById(R.id.btnMain)
+        ivPower = findViewById(R.id.ivPower)
+        tvStatus = findViewById(R.id.tvStatus)
+        tvTimer = findViewById(R.id.tvTimer)
+        tvIpProto = findViewById(R.id.tvIpProto)
+
+        updateServerDisplay()
 
         btnMain.setOnClickListener {
             if (currentState == VpnState.CONNECTING) return@setOnClickListener
-            handleToggle()
-        }
-
-
-        // Логика МЕНЮ
-        btnMenu.setOnClickListener {
-            // Анимация
-            btnMenu.animate().scaleX(0.9f).scaleY(0.9f).setDuration(100).withEndAction {
-                btnMenu.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+            btnMain.animate().scaleX(0.95f).scaleY(0.95f).setDuration(150).withEndAction {
+                btnMain.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
+                handleToggle()
             }.start()
-
-            // ПЕРЕХОД НА ЭКРАН МЕНЮ
-            val intent = Intent(this, MenuActivity::class.java)
-            startActivity(intent)
-            // Добавляем плавную анимацию перехода (опционально)
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         }
-
-        // Логика НАСТРОЕК
-        btnSettings.setOnClickListener {
-            // Анимация
-            btnSettings.animate().scaleX(0.9f).scaleY(0.9f).setDuration(100).withEndAction {
-                btnSettings.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
-            }.start()
-
-            // ПЕРЕХОД НА ЭКРАН НАСТРОЕК
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-        }
-
     }
 
-    private fun fetchServerConfig() {
-        val database = Firebase.database
-        val myRef = database.getReference("vpn_config")
-
-        myRef.get().addOnSuccessListener { snapshot ->
-            if (snapshot.exists()) {
-                // Получаем данные. Приводим типы безопасно.
-                serverIp = snapshot.child("ip").value.toString()
-                // Порт в Firebase хранится как Long
-                serverPort = (snapshot.child("port").value as? Long)?.toInt() ?: 80
-                uuidFree = snapshot.child("uuid_free").value.toString()
-                uuidPremium = snapshot.child("uuid_premium").value.toString()
-
-                Log.d("Firebase", "Config loaded: $serverIp:$serverPort")
+    private fun updateServerDisplay() {
+        if (::tvIpProto.isInitialized) {
+            val config = ServerConfigManager.getConfig(this)
+            val protoLabel = if (config.security.equals("tls", ignoreCase = true) || config.network.equals("ws", ignoreCase = true)) {
+                "VLESS CDN"
+            } else if (config.protocol.equals("vless", ignoreCase = true)) {
+                "VLESS Reality"
+            } else {
+                config.protocol.uppercase()
             }
-        }.addOnFailureListener {
-            Log.e("Firebase", "Error loading config", it)
+            tvIpProto.text = "${config.ip} · $protoLabel"
         }
+    }
+
+    // Настройки
+    private fun initSettings() {
+        tvDownload = findViewById(R.id.tvDownload)
+        tvUpload = findViewById(R.id.tvUpload)
+        tvPing = findViewById(R.id.tvPing)
+        topGraph = findViewById(R.id.vGraphFallback)
+
+        val switchKill = findViewById<Switch>(R.id.switchKill)
+        val switchNotif = findViewById<Switch>(R.id.switchNotif)
+        val prefs = getSharedPreferences("VPN_SETTINGS", Context.MODE_PRIVATE)
+
+        switchKill.isChecked = prefs.getBoolean("kill_switch", false)
+        switchNotif.isChecked = prefs.getBoolean("notifications", true)
+
+        switchKill.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("kill_switch", isChecked).apply()
+        }
+        switchNotif.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("notifications", isChecked).apply()
+        }
+
+        val tvAppVersion = tabSettings.findViewById<TextView>(R.id.tvAppVersion)
+        tvAppVersion?.text = "Версия ${BuildConfig.VERSION_NAME} · Нажмите для проверки"
+
+        val btnCheckUpdates = tabSettings.findViewById<View>(R.id.btnCheckUpdates)
+        btnCheckUpdates?.setOnClickListener {
+            AppUpdateManager.checkUpdate(this, silent = false)
+        }
+    }
+
+    // Профиль
+    private fun initProfile() {
+        val auth = FirebaseAuth.getInstance()
+        val tvUserTitle = tabProfile.findViewById<TextView>(R.id.tvUserTitle)
+        val tvUserSub = tabProfile.findViewById<TextView>(R.id.tvUserSub)
+        val btnLogin = tabProfile.findViewById<View>(R.id.btnLogin)
+        val btnPremium = tabProfile.findViewById<View>(R.id.btnPremium)
+        val btnLinkTelegram = tabProfile.findViewById<View>(R.id.btnLinkTelegram)
+        val tvTelegramLinkTitle = tabProfile.findViewById<TextView>(R.id.tvTelegramLinkTitle)
+        val tvTelegramLinkSub = tabProfile.findViewById<TextView>(R.id.tvTelegramLinkSub)
+
+        val user = auth.currentUser
+        val tgKey = SubscriptionManager.getSavedTelegramKey(this)
+        val tgUsername = SubscriptionManager.getTelegramUsername(this)
+        val isGuest = SubscriptionManager.isLoggedOut(this) || (user == null && tgKey.isNullOrBlank() && tgUsername.isNullOrBlank())
+
+        if (user != null && !isGuest) {
+            tvUserTitle.text = user.email ?: "Пользователь"
+            tvUserSub.text = if (isPremiumUser) "Подписка активна (Нажмите для выхода)" else "Авторизован (Нажмите для выхода)"
+            btnLogin.setOnClickListener {
+                showLogoutDialog {
+                    auth.signOut()
+                    SubscriptionManager.unlinkDevice(this) {
+                        runOnUiThread {
+                            isPremiumUser = false
+                            initProfile()
+                            updateStatusUi()
+                            ToastHelper.show(this@MainActivity, "Вы успешно вышли из аккаунта", ToastHelper.Type.INFO)
+                        }
+                    }
+                }
+            }
+        } else if (!isGuest && (!tgKey.isNullOrBlank() || !tgUsername.isNullOrBlank())) {
+            tvUserTitle.text = if (!tgUsername.isNullOrBlank()) "@$tgUsername" else "Telegram: ${tgKey?.take(10)}..."
+            tvUserSub.text = if (isPremiumUser) "Подписка активна (до 3 устр.) · Выйти" else "Ключ не активен · Выйти"
+            btnLogin.setOnClickListener {
+                showLogoutDialog {
+                    SubscriptionManager.unlinkDevice(this) {
+                        runOnUiThread {
+                            isPremiumUser = false
+                            initProfile()
+                            updateStatusUi()
+                            ToastHelper.show(this@MainActivity, "Вы успешно вышли из аккаунта", ToastHelper.Type.INFO)
+                        }
+                    }
+                }
+            }
+        } else {
+            tvUserTitle.text = "Гостевой доступ"
+            val remainingTrial = SessionManager.getRemainingTime(this)
+            val minutesLeft = remainingTrial / 60000
+            tvUserSub.text = if (remainingTrial > 0) {
+                "Пробный период: $minutesLeft мин осталось · Войти"
+            } else {
+                "Пробный период истек · Нажмите для входа"
+            }
+            btnLogin.setOnClickListener {
+                startActivity(Intent(this, AuthActivity::class.java))
+            }
+        }
+
+        // Telegram 1-Click Link
+        if (!isGuest && (!tgUsername.isNullOrBlank() || !tgKey.isNullOrBlank())) {
+            tvTelegramLinkTitle.text = if (!tgUsername.isNullOrBlank()) "Telegram: @$tgUsername" else "Telegram привязан"
+            tvTelegramLinkSub.text = if (isPremiumUser) "Подписка синхронизирована (активна)" else "Синхронизировано · Нажмите для обновления"
+        } else {
+            tvTelegramLinkTitle.text = "Войти через Telegram"
+            tvTelegramLinkSub.text = "1 клик — автоматическая привязка"
+        }
+        btnLinkTelegram.setOnClickListener {
+            SubscriptionManager.openTelegramLink(this)
+        }
+
+        btnPremium.setOnClickListener {
+            startActivity(Intent(this, PremiumActivity::class.java))
+        }
+
+        setupMenuItem(R.id.btnTelegram, "Telegram Канал и Бот", R.drawable.ic_telegram) {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/PullseVpn_bot")))
+        }
+
+        setupMenuItem(R.id.btnShare, "Поделиться", R.drawable.ic_share) {
+            val sendIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_TEXT, "Попробуй PulseVPN: единый ключ на 3 устройства через Telegram @PullseVpn_bot")
+                type = "text/plain"
+            }
+            startActivity(Intent.createChooser(sendIntent, "Поделиться через"))
+        }
+
+        setupMenuItem(R.id.btnRate, "Оценить нас", R.drawable.ic_star) {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pulsevpn.shop")))
+        }
+
+        setupMenuItem(R.id.btnAbout, "О приложении", R.drawable.ic_info) {
+            android.widget.Toast.makeText(this, "PulseVPN v${BuildConfig.VERSION_NAME} · Сервер $serverIp", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showLogoutDialog(onConfirm: () -> Unit) {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Выход из аккаунта")
+            .setMessage("Вы уверены, что хотите выйти? Текущее устройство будет отвязано.")
+            .setPositiveButton("Выйти") { _, _ -> onConfirm() }
+            .setNegativeButton("Отмена", null)
+            .create()
+        dialog.show()
+    }
+
+    private fun setupMenuItem(itemId: Int, title: String, iconResId: Int, onClick: () -> Unit) {
+        val item = tabProfile.findViewById<View>(itemId) ?: findViewById<View>(itemId) ?: return
+        item.findViewById<TextView>(R.id.itemTitle)?.text = title
+        item.findViewById<ImageView>(R.id.itemIcon)?.setImageResource(iconResId)
+        item.setOnClickListener { onClick() }
     }
 
     override fun onResume() {
         super.onResume()
+        AppUpdateManager.checkPendingInstall(this)
+        syncVpnState()
+        checkPremium()
+        isUpdatingStats = true
+        lastRxBytes = TrafficStats.getTotalRxBytes()
+        lastTxBytes = TrafficStats.getTotalTxBytes()
+        handler.post(statsRunnable)
+        updatePing()
+    }
 
-        // 1. Применяем тему (Ваш старый код)
-        ThemeManager.applyTheme(this)
-        ThemeManager.applyTextColors(this, findViewById(R.id.tvAppName))
-        ThemeManager.applyBtnColors(this,
-            findViewById(R.id.btnMenu),
-            findViewById(R.id.btnSettings)
-        )
+    override fun onPause() {
+        super.onPause()
+        isUpdatingStats = false
+        handler.removeCallbacks(statsRunnable)
+    }
 
-        // 2. ОБНОВЛЕННАЯ ЛОГИКА ПРОВЕРКИ ПОДПИСКИ
-        val user = FirebaseAuth.getInstance().currentUser
+    override fun onDestroy() {
+        super.onDestroy()
+        ServerConfigManager.stopListening()
+        try {
+            unregisterReceiver(vpnReceiver)
+        } catch (e: Exception) {}
+        connectionTimer?.cancel()
+        handler.removeCallbacksAndMessages(null)
+    }
 
-        if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            db.collection("users").document(user.uid).get()
-                .addOnSuccessListener { document ->
-                    if (document.exists()) {
-                        // Сохраняем данные в переменные класса
-                        isPremiumUser = document.getBoolean("isPremium") ?: false
-                        userExpiryDate = document.getLong("subscriptionExpiry") ?: 0L
-
-                        // Если VPN включен и у юзера Премиум — обновляем интерфейс
-                        if (currentState == VpnState.CONNECTED && isPremiumUser) {
-
-                            // Дополнительная проверка: вдруг время вышло прямо сейчас?
-                            if (userExpiryDate > 0 && System.currentTimeMillis() > userExpiryDate) {
-                                disconnect() // Время вышло — отключаем
-                            } else {
-                                connectionTimer?.cancel() // Убираем таймер 1 часа
-                                tvStatus.text = "CONNECTED • UNLIMITED"
-                            }
-                        }
-                    }
-                }
+    private fun syncVpnState() {
+        val isActive = MyVpnService.isVpnActive(this)
+        if (isActive) {
+            if (currentState != VpnState.CONNECTED) {
+                currentState = VpnState.CONNECTED
+                tvStatus.text = "ПОДКЛЮЧЕНО"
+                tvStatus.setTextColor(colorCyan)
+                ivPower.setColorFilter(colorCyan)
+                ivPower.setImageResource(android.R.drawable.ic_lock_power_off)
+                startUiTimer()
+            }
         } else {
-            // Если пользователь вышел из аккаунта
-            isPremiumUser = false
-            userExpiryDate = 0L
+            if (currentState != VpnState.DISCONNECTED) {
+                currentState = VpnState.DISCONNECTED
+                tvStatus.setTextColor(colorInactive)
+                ivPower.setColorFilter(Color.WHITE)
+                ivPower.setImageResource(android.R.drawable.ic_lock_power_off)
+                connectionTimer?.cancel()
+                tvTimer.text = "00:00:00"
+            }
+            updateStatusUi()
         }
     }
 
+    private fun fetchServerConfig() {
+        ServerConfigManager.startListening(this) { updatedConfig ->
+            runOnUiThread {
+                serverIp = updatedConfig.ip
+                serverPort = updatedConfig.port
+                updateServerDisplay()
+            }
+        }
+    }
+
+    private fun checkPremium() {
+        isCheckingSubscription = true
+        SubscriptionManager.checkSubscriptionStatus(this) { isSub ->
+            isPremiumUser = isSub
+            isCheckingSubscription = false
+            runOnUiThread {
+                initProfile()
+                updateStatusUi()
+            }
+        }
+    }
+
+    private fun updateStatusUi() {
+        if (currentState == VpnState.DISCONNECTED) {
+            if (isPremiumUser) {
+                tvStatus.text = "ГОТОВ К ПОДКЛЮЧЕНИЮ"
+            } else if (SessionManager.isTrialActive(this)) {
+                val mins = SessionManager.getRemainingTime(this) / 60000
+                tvStatus.text = "ПРОБНЫЙ ПЕРИОД: $mins МИН"
+            } else {
+                tvStatus.text = "ПРОБНЫЙ ПЕРИОД ИСТЕК"
+            }
+        }
+    }
+
+    // Обработка кнопки подключения
     private fun handleToggle() {
-        if (currentState == VpnState.CONNECTED) {
+        // Если VPN уже подключен или сервис активен — выключаем сразу с первого клика!
+        if (currentState == VpnState.CONNECTED || MyVpnService.isVpnActive(this)) {
             disconnect()
-        } else {
-            // === ИЗМЕНЕНИЕ: ПОКАЗАТЬ РЕКЛАМУ ПЕРЕД ПОДКЛЮЧЕНИЕМ ===
-            // Сначала анимация нажатия...
-            btnMain.animate().scaleX(0.9f).scaleY(0.9f).setDuration(150).withEndAction {
-                btnMain.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+            return
+        }
 
-                // Проверяем премиум (если есть - рекламу не показываем)
-                // Но пока считаем, что показываем всем
+        if (currentState == VpnState.CONNECTING) return
 
-                if (isPremiumUser) {
-                    // ЕСЛИ ПРЕМИУМ: Сразу подключаем, без рекламы и проверок
+        val isTrialActive = SessionManager.isTrialActive(this)
+        val isCached = SubscriptionManager.isCachedPremium(this)
+
+        if (isPremiumUser || isCached || isTrialActive) {
+            connect()
+        } else if (isCheckingSubscription) {
+            // Если в данный момент идет первая загрузка статуса подписки из сети
+            currentState = VpnState.CONNECTING
+            tvStatus.text = "ПРОВЕРКА ДОСТУПА..."
+            tvStatus.setTextColor(colorAccent)
+            ivPower.setColorFilter(colorAccent)
+
+            handler.postDelayed({
+                if (isPremiumUser || SubscriptionManager.isCachedPremium(this) || SessionManager.isTrialActive(this)) {
                     connect()
                 } else {
-                    // ЕСЛИ БЕСПЛАТНО: Проверяем сессию и рекламу
-                    if (SessionManager.isSessionActive(this)) {
-                        connect()
-                    } else {
-                        tvStatus.text = "LOADING AD..."
-                        AdManager.showAd(this) {
-                            SessionManager.startNewSession(this)
-                            connect()
-                        }
-                    }
+                    currentState = VpnState.DISCONNECTED
+                    updateStatusUi()
+                    showTrialExpiredDialog()
                 }
-            }.start()
+            }, 1000)
+        } else {
+            showTrialExpiredDialog()
         }
     }
 
     private fun connect() {
         currentState = VpnState.CONNECTING
-        tvStatus.text = "INITIALIZING..."
-        tvStatus.setTextColor(colorSun)
+        tvStatus.text = "ПОДКЛЮЧЕНИЕ..."
+        tvStatus.setTextColor(colorAccent)
+        ivPower.setColorFilter(colorAccent)
+        ivPower.setImageResource(android.R.drawable.ic_lock_power_off)
 
-        // Сжатие кнопки
-        btnMain.animate().scaleX(0.95f).scaleY(0.95f).setDuration(150).withEndAction {
-            btnMain.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
-        }.start()
-
-        // Запуск кометы
-        startCometAnimation()
-
-        // === СМЕНА ИКОНКИ ===
-        // Сначала плавно прячем старую иконку
-        ivIcon.animate().alpha(0f).setDuration(200).withEndAction {
-            // Меняем картинку
-            ivIcon.setImageResource(R.drawable.ic_hourglass)
-            ivIcon.setColorFilter(colorSun)
-
-            // И запускаем новую анимацию (она сама сделает Fade In)
-            startHourglassAnimation()
-        }.start()
-
-        // === ВАЖНОЕ ИЗМЕНЕНИЕ ===
-        // Спрашиваем у системы: "Можно запустить VPN?"
         val intent = android.net.VpnService.prepare(this)
+        if (intent != null) vpnPermissionLauncher.launch(intent) else startVpnService()
 
-        if (intent != null) {
-            // Разрешения нет -> Показываем системное окно
-            vpnPermissionLauncher.launch(intent)
-        } else {
-            // Разрешение уже есть -> Запускаем сразу
-            startVpnService()
-        }
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            if (currentState == VpnState.CONNECTING) {
-                setConnectedState()
-            }
-        }, 4000)
+        handler.postDelayed({ setConnectedState() }, 2000)
     }
 
     private fun disconnect() {
         currentState = VpnState.DISCONNECTED
-        tvStatus.text = "TAP TO CONNECT"
-        tvStatus.setTextColor(colorTextWhite)
+        tvStatus.setTextColor(colorInactive)
+        ivPower.setColorFilter(Color.WHITE)
+        ivPower.setImageResource(android.R.drawable.ic_lock_power_off)
+        ivPower.animate().cancel()
+        ivPower.rotation = 0f
 
         stopVpnService()
-        stopAnimations()
         connectionTimer?.cancel()
-        connectionTimer = null
-
-        btnMain.setCardBackgroundColor(colorGlassDark)
-
-        ivIcon.animate().alpha(0f).setDuration(200).withEndAction {
-            ivIcon.setImageResource(android.R.drawable.ic_lock_power_off)
-            ivIcon.setColorFilter(Color.WHITE)
-            ivIcon.animate().alpha(1f).setDuration(200).start()
-        }.start()
-
+        tvTimer.text = "00:00:00"
+        updateStatusUi()
     }
 
     private fun setConnectedState() {
         currentState = VpnState.CONNECTED
-        tvStatus.text = "SECURED"
-        tvStatus.setTextColor(colorSun)
+        tvStatus.text = "ПОДКЛЮЧЕНО"
+        tvStatus.setTextColor(colorCyan)
+        ivPower.setColorFilter(colorCyan)
+        ivPower.setImageResource(android.R.drawable.ic_lock_power_off)
+        ivPower.animate().cancel()
+        ivPower.rotation = 0f
 
-        // Убираем комету
-        ivLoadingRing.animate().alpha(0f).setDuration(1000).withEndAction {
-            rotateAnimator?.cancel()
-            ivLoadingRing.visibility = View.INVISIBLE
+        btnMain.animate().scaleX(1.05f).scaleY(1.05f).setDuration(200).withEndAction {
+            btnMain.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
         }.start()
 
-        // Останавливаем часы
-        hourglassAnimator?.cancel()
-
-        // Кнопка остается темной
-        btnMain.setCardBackgroundColor(colorGlassDark)
-
-        // === ПЛАВНАЯ СМЕНА НА ЗАМОК ===
-        // Исчезаем часы
-        ivIcon.animate().alpha(0f).setDuration(300).withEndAction {
-            // Сбрасываем поворот (чтобы замок не был кривым)
-            ivIcon.rotation = 0f
-
-            // Ставим замок
-            ivIcon.setImageResource(android.R.drawable.ic_lock_power_off)
-            ivIcon.setColorFilter(colorSun)
-
-            // Появляем замок
-            ivIcon.animate().alpha(1f).setDuration(300).start()
-        }.start()
-
-        if (isPremiumUser) {
-            // ЕСЛИ ПРЕМИУМ: Пишем "Безлимит" и не запускаем таймер
-            tvStatus.text = "CONNECTED • UNLIMITED"
-        } else {
-            // ЕСЛИ БЕСПЛАТНО: Запускаем таймер
-            startUiTimer()
-        }
-    }
-
-    // --- АНИМАЦИИ ---
-
-    private fun startCometAnimation() {
-        ivLoadingRing.visibility = View.VISIBLE
-        ivLoadingRing.alpha = 0f
-        ivLoadingRing.rotation = 90f
-
-        ivLoadingRing.animate().alpha(1f).setDuration(1500).setInterpolator(LinearInterpolator()).start()
-
-        rotateAnimator = ObjectAnimator.ofFloat(ivLoadingRing, "rotation", 90f, 450f).apply {
-            duration = 3000
-            repeatCount = ObjectAnimator.INFINITE
-            interpolator = LinearInterpolator()
-            start()
-        }
-    }
-
-    // Вращение часов
-    private fun startHourglassAnimation() {
-        // Подготовка: Резкое появление (за 200мс)
-        ivIcon.alpha = 0f
-        ivIcon.rotation = 0f
-        ivIcon.animate().alpha(1f).setDuration(200).start()
-
-        // --- НАСТРОЙКА ТАЙМИНГА ---
-
-        // 1. Старт (0 градусов)
-        val k0 = Keyframe.ofFloat(0f, 0f)
-
-        // 2. Первый переворот (заканчивается на 35% времени)
-        val k1 = Keyframe.ofFloat(0.35f, 180f)
-        k1.interpolator = AccelerateDecelerateInterpolator() // Разгон-Торможение
-
-        // 3. ПАУЗА (Длинная "мертвая точка" до 65% времени)
-        // С 35% до 65% значение не меняется (180 градусов)
-        val k2 = Keyframe.ofFloat(0.65f, 180f)
-
-        // 4. Второй переворот (до 360 градусов к концу)
-        val k3 = Keyframe.ofFloat(1f, 360f)
-        k3.interpolator = AccelerateDecelerateInterpolator()
-
-        val pvhRotation = PropertyValuesHolder.ofKeyframe("rotation", k0, k1, k2, k3)
-
-        hourglassAnimator = ObjectAnimator.ofPropertyValuesHolder(ivIcon, pvhRotation).apply {
-            duration = 3000 // Общее время цикла 3 секунды (пауза будет почти 1 секунду)
-            repeatCount = ObjectAnimator.INFINITE
-            repeatMode = ObjectAnimator.RESTART
-            start()
-        }
-    }
-
-    private fun stopAnimations() {
-        rotateAnimator?.cancel()
-        hourglassAnimator?.cancel() // Останавливаем часы
-
-        ivIcon.rotation = 0f
-
-        ivLoadingRing.animate().alpha(0f).setDuration(500).withEndAction {
-            ivLoadingRing.visibility = View.INVISIBLE
-        }.start()
-    }
-
-    private fun startVpnService() {
-        val intent = Intent(this, MyVpnService::class.java)
-        intent.action = "START"
-
-        intent.putExtra("SERVER_IP", serverIp)
-        intent.putExtra("SERVER_PORT", serverPort)
-        intent.putExtra("UUID_FREE", uuidFree)
-        intent.putExtra("UUID_PREMIUM", uuidPremium)
-
-        // ПЕРЕДАЕМ ТОЧНУЮ ДАТУ
-        intent.putExtra("EXPIRY_TIME", userExpiryDate)
-
-        startService(intent)
-    }
-
-    private fun stopVpnService() {
-        val intent = Intent(this, MyVpnService::class.java)
-        intent.action = "STOP"
-        startService(intent)
+        startUiTimer()
     }
 
     private fun startUiTimer() {
         connectionTimer?.cancel()
+        val isTrial = !isPremiumUser && SessionManager.isTrialActive(this)
+        val startTime = MyVpnService.getStartTime(this)
+        val initialElapsed = if (!isTrial) {
+            val diff = System.currentTimeMillis() - startTime
+            if (diff > 0) diff else 0L
+        } else 0L
 
-        // Получаем, сколько реально осталось времени
-        val timeHeader = SessionManager.getRemainingTime(this)
+        connectionTimer = object : CountDownTimer(86400000L, 1000) {
+            var elapsed = initialElapsed
 
-        if (timeHeader <= 0) {
-            disconnect()
-            return
-        }
-
-        // Запускаем таймер на остаток времени
-        connectionTimer = object : android.os.CountDownTimer(timeHeader, 1000) {
-            override fun onTick(millisUntilFinished: Long) {
-                val minutes = millisUntilFinished / 1000 / 60
-                val seconds = millisUntilFinished / 1000 % 60
-                val timeString = String.format("%02d:%02d", minutes, seconds)
-
-                tvStatus.text = "CONNECTED • $timeString"
+            override fun onTick(ms: Long) {
+                if (isTrial) {
+                    val remainingMs = SessionManager.getRemainingTime(this@MainActivity)
+                    if (remainingMs <= 0) {
+                        disconnect()
+                        showTrialExpiredDialog()
+                        return
+                    }
+                    val h = remainingMs / 1000 / 3600
+                    val m = (remainingMs / 1000 / 60) % 60
+                    val s = (remainingMs / 1000) % 60
+                    tvTimer.text = String.format("%02d:%02d:%02d", h, m, s)
+                } else {
+                    elapsed += 1000
+                    val h = elapsed / 1000 / 3600
+                    val m = (elapsed / 1000 / 60) % 60
+                    val s = (elapsed / 1000) % 60
+                    tvTimer.text = String.format("%02d:%02d:%02d", h, m, s)
+                }
             }
 
             override fun onFinish() {
-                tvStatus.text = "SESSION EXPIRED"
                 disconnect()
             }
         }.start()
+    }
+
+    private fun startVpnService() {
+        val customUuid = SubscriptionManager.getCustomUuid(this) ?: "768b8f55-440a-4528-9cac-db50c91e50b1"
+        val config = ServerConfigManager.getConfig(this)
+        val intent = Intent(this, MyVpnService::class.java).apply {
+            action = "START"
+            putExtra("SERVER_IP", config.ip)
+            putExtra("SERVER_PORT", config.port)
+            putExtra("SERVER_UUID", customUuid)
+            putExtra("SERVER_PROTOCOL", config.protocol)
+            putExtra("SERVER_SECURITY", config.security)
+            putExtra("SERVER_NETWORK", config.network)
+            putExtra("SERVER_PATH", config.path)
+            putExtra("SERVER_SNI", config.sni)
+            putExtra("SERVER_PUBLIC_KEY", config.publicKey)
+            putExtra("SERVER_SHORT_ID", config.shortId)
+            putExtra("SERVER_FINGERPRINT", config.fingerprint)
+            putExtra("SERVER_FLOW", config.flow)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+    private fun stopVpnService() {
+        startService(Intent(this, MyVpnService::class.java).apply { action = "STOP" })
+    }
+
+    // Уведомление о старте 1-часового триала
+    private fun showTrialWelcomeDialog() {
+        GlassDialog.show(
+            context = this,
+            title = "Пробный доступ 1 час",
+            message = "Вам предоставлен 1 час бесплатного VPN без ограничений скорости.\n\nПротестируйте стабильность соединения и в любой момент привяжите Telegram для доступа со всех устройств.",
+            iconRes = R.drawable.ic_hourglass,
+            positiveText = "Начать тест",
+            negativeText = "Вход через Telegram",
+            onNegativeClick = {
+                startActivity(Intent(this, AuthActivity::class.java))
+            }
+        )
+    }
+
+    // Уведомление об окончании триала
+    private fun showTrialExpiredDialog() {
+        GlassDialog.show(
+            context = this,
+            title = "Пробный период завершен",
+            message = "Бесплатный 1-часовой период окончен.\n\nДля продолжения авторизуйтесь через Telegram-бота @PullseVpn_bot (единый ключ до 3 устройств) или оформите PRO подписку.",
+            iconRes = R.drawable.ic_hourglass,
+            positiveText = "Войти через Telegram",
+            negativeText = "PRO тарифы",
+            onNegativeClick = {
+                startActivity(Intent(this, PremiumActivity::class.java))
+            },
+            onPositiveClick = {
+                startActivity(Intent(this, AuthActivity::class.java))
+            }
+        )
+    }
+
+    private val statsRunnable = object : Runnable {
+        override fun run() {
+            if (!isUpdatingStats) return
+
+            val currentRxBytes = TrafficStats.getTotalRxBytes()
+            val currentTxBytes = TrafficStats.getTotalTxBytes()
+            val rxDelta = currentRxBytes - lastRxBytes
+            val txDelta = currentTxBytes - lastTxBytes
+
+            lastRxBytes = currentRxBytes
+            lastTxBytes = currentTxBytes
+
+            val rxMbits = (rxDelta * 8.0) / 1_000_000.0
+            val txMbits = (txDelta * 8.0) / 1_000_000.0
+
+            tvDownload.text = String.format("%.1f", rxMbits)
+            tvUpload.text = String.format("%.1f", txMbits)
+
+            if (currentState == VpnState.CONNECTED) {
+                topGraph.addDataPoint((rxMbits + txMbits).toFloat())
+            } else {
+                topGraph.addDataPoint(0f)
+            }
+
+            handler.postDelayed(this, 1000)
+        }
+    }
+
+    private fun updatePing() {
+        thread {
+            try {
+                val process = Runtime.getRuntime().exec("/system/bin/ping -c 1 -W 1 8.8.8.8")
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                var pingResult = "0"
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    if (line?.contains("time=") == true) {
+                        val start = line!!.indexOf("time=") + 5
+                        val end = line!!.indexOf(" ms")
+                        if (start != -1 && end != -1) {
+                            pingResult = line!!.substring(start, end).toFloat().toInt().toString()
+                        }
+                    }
+                }
+                process.waitFor()
+                handler.post { tvPing.text = pingResult }
+            } catch (e: Exception) {
+                handler.post { tvPing.text = "0" }
+            }
+        }.also {
+            handler.postDelayed({ if (isUpdatingStats) updatePing() }, 5000)
+        }
     }
 }

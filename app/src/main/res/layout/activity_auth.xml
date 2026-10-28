@@ -3,27 +3,33 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/bg_nature">
+    android:layout_height="match_parent">
 
-    <!-- Вуаль -->
+    <!-- Global Background -->
+    <ImageView
+        android:id="@+id/ivBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/background" />
+
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#E612141D" />
+        android:background="#66000000" />
 
-    <!-- Кнопка Назад -->
+    <!-- Back button -->
     <ImageButton
         android:id="@+id/btnBack"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="50dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_menu"
-        android:padding="10dp"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="56dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/ic_arrow_back"
+        android:padding="8dp"
         android:scaleType="fitCenter"
-        app:tint="#FFFFFF"
+        app:tint="@color/white"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -38,101 +44,223 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="30dp"
+            android:padding="20dp"
             android:gravity="center_horizontal">
 
-            <!-- Иконка Профиля -->
-            <ImageView
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@android:drawable/ic_menu_myplaces"
-                app:tint="#FFD54F"
-                android:background="?attr/selectableItemBackgroundBorderless"
+            <!-- App logo / icon -->
+            <FrameLayout
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_circle_primary">
+                <ImageView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_telegram"
+                    app:tint="@color/white" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/tvHeaderTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Авторизация"
+                android:textColor="@color/white"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Единый доступ для всех ваших устройств (до 3)"
+                android:textColor="#B0B0C0"
+                android:textSize="13sp"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- Telegram Key Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_glass_card"
                 android:padding="20dp"
-                android:layout_marginBottom="20dp"/>
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Вход через Telegram"
+                    android:textColor="@color/white"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Привязка подписки в один клик без ввода паролей"
+                    android:textColor="#A0A0B5"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- 1-Click Telegram Button -->
+                <LinearLayout
+                    android:id="@+id/btnOpenTelegramBot"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:background="@drawable/bg_glass_btn_primary"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp">
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_telegram"
+                        app:tint="@color/white"
+                        android:layout_marginEnd="10dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ВОЙТИ В 1 КЛИК ЧЕРЕЗ TELEGRAM"
+                        android:textColor="@color/white"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.03"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Или введите ключ вручную:"
+                    android:textColor="#A0A0B5"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="10dp" />
+
+                <EditText
+                    android:id="@+id/etTelegramKey"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:background="@drawable/bg_glass_input"
+                    android:hint="Ключ подписки или ссылка из бота"
+                    android:textColorHint="#60FFFFFF"
+                    android:textColor="@color/white"
+                    android:paddingHorizontal="16dp"
+                    android:inputType="textUri"
+                    android:layout_marginBottom="10dp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnActivateKey"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:background="@drawable/bg_outline_button"
+                    android:text="АКТИВИРОВАТЬ КЛЮЧ"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Divider -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="20dp">
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#20FFFFFF" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="  ИЛИ ВХОД ПО EMAIL  "
+                    android:textColor="#707085"
+                    android:textSize="11sp" />
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#20FFFFFF" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Welcome Back"
-                android:textColor="#FFFFFF"
-                android:textSize="28sp"
+                android:textColor="@color/white"
+                android:textSize="20sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="10dp"/>
+                android:layout_marginBottom="14dp"/>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Sign in to sync your premium"
-                android:textColor="#80FFFFFF"
-                android:textSize="14sp"
-                android:layout_marginBottom="40dp"/>
-
-            <!-- Поле Email -->
+            <!-- Email field -->
             <EditText
+                android:id="@+id/etEmail"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:background="@drawable/bg_input_field"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_glass_input"
                 android:hint="Email"
                 android:textColorHint="#60FFFFFF"
-                android:textColor="#FFFFFF"
-                android:paddingHorizontal="20dp"
+                android:textColor="@color/white"
+                android:paddingHorizontal="16dp"
                 android:inputType="textEmailAddress"
-                android:id="@+id/etEmail"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="10dp"/>
 
-            <!-- Поле Password -->
+            <!-- Password field -->
             <EditText
+                android:id="@+id/etPassword"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:background="@drawable/bg_input_field"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_glass_input"
                 android:hint="Password"
                 android:textColorHint="#60FFFFFF"
-                android:textColor="#FFFFFF"
-                android:paddingHorizontal="20dp"
+                android:textColor="@color/white"
+                android:paddingHorizontal="16dp"
                 android:inputType="textPassword"
-                android:id="@+id/etPassword"
-                android:layout_marginBottom="30dp"/>
+                android:layout_marginBottom="6dp"/>
 
-            <!-- КНОПКА ЗАБЫЛИ ПАРОЛЬ -->
+            <!-- Forgot Password -->
             <TextView
                 android:id="@+id/tvForgotPassword"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
-                android:layout_marginTop="-10dp"
-                android:layout_marginBottom="20dp"
+                android:layout_marginBottom="16dp"
                 android:text="Forgot Password?"
-                android:textColor="#FFD54F"
-                android:textSize="14sp"
-                android:textStyle="bold"
+                android:textColor="#00E5FF"
+                android:textSize="13sp"
                 android:clickable="true"
                 android:focusable="true"
-                android:background="?attr/selectableItemBackground"
-                android:padding="8dp"/>
+                android:padding="6dp"/>
 
-            <!-- Кнопка Действия -->
+            <!-- Action button -->
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnAction"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:background="@drawable/bg_button_gold"
+                android:layout_height="50dp"
+                android:background="@drawable/bg_outline_button"
                 android:text="LOG IN"
-                android:textColor="#12141D"
-                android:textSize="16sp"
+                android:textColor="@color/white"
+                android:textSize="15sp"
                 android:textStyle="bold"/>
 
-            <!-- Переключатель -->
+            <!-- Switch mode -->
             <TextView
                 android:id="@+id/tvSwitchMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="30dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="24dp"
                 android:text="Don't have an account? Sign Up"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"/>
+                android:textColor="#A0A0A0"
+                android:textSize="13sp"/>
 
         </LinearLayout>
     </ScrollView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

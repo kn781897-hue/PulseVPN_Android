@@ -3,75 +3,78 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="320dp"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_toast"
+    android:background="@drawable/bg_dialog_glass"
     android:padding="24dp">
 
-    <!-- ИКОНКА (Теперь Белая) -->
-    <ImageView
-        android:id="@+id/ivDialogIcon"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:src="@drawable/ic_info"
-        app:tint="#FFFFFF"
+    <FrameLayout
+        android:id="@+id/flIconContainer"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/bg_glass_circle"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:contentDescription="icon"/>
+        app:layout_constraintTop_toTopOf="parent">
 
-    <!-- ЗАГОЛОВОК -->
+        <ImageView
+            android:id="@+id/ivDialogIcon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_hourglass"
+            app:tint="#00E5FF"
+            android:contentDescription="icon"/>
+    </FrameLayout>
+
     <TextView
         android:id="@+id/tvDialogTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Title"
+        android:text="Заголовок"
         android:textColor="#FFFFFF"
-        android:textSize="20sp"
+        android:textSize="18sp"
         android:textStyle="bold"
         android:gravity="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/ivDialogIcon" />
+        app:layout_constraintTop_toBottomOf="@id/flIconContainer" />
 
-    <!-- СООБЩЕНИЕ -->
     <TextView
         android:id="@+id/tvDialogMessage"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Message..."
-        android:textColor="#CCFFFFFF"
+        android:layout_marginTop="10dp"
+        android:text="Сообщение..."
+        android:textColor="#B3FFFFFF"
         android:textSize="14sp"
+        android:lineSpacingExtra="3dp"
         android:gravity="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvDialogTitle" />
 
-    <!-- КНОПКА OK (Золотая с темным текстом) -->
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnPositive"
         android:layout_width="0dp"
         android:layout_height="48dp"
-        android:layout_marginTop="24dp"
-        android:background="@drawable/bg_button_gold"
-        android:text="OK"
-        android:textColor="#12141D"
+        android:layout_marginTop="22dp"
+        android:background="@drawable/bg_dialog_button_primary"
+        android:text="Продолжить"
+        android:textColor="#FFFFFF"
         android:textStyle="bold"
-        android:textSize="16sp"
+        android:textSize="15sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvDialogMessage" />
 
-    <!-- КНОПКА ОТМЕНА (Белый текст) -->
     <TextView
         android:id="@+id/btnNegative"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Cancel"
-        android:textColor="#CCFFFFFF"
+        android:layout_marginTop="12dp"
+        android:text="Позже"
+        android:textColor="#8E8EA0"
         android:textSize="14sp"
-        android:textStyle="bold"
         android:padding="8dp"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"

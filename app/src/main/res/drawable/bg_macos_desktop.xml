@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <!-- Very dark clean background base -->
+            <solid android:color="#08080A" />
+        </shape>
+    </item>
+    
+    <!-- Giant ultra smooth bloom top left (Neon/Violet) -->
+    <item android:top="-600dp" android:left="-600dp" android:bottom="-100dp" android:right="-200dp">
+        <shape android:shape="oval">
+            <gradient android:type="radial" android:gradientRadius="1600dp"
+                android:centerX="0.5" android:centerY="0.5"
+                android:startColor="#1A8A2BE2" android:endColor="#008A2BE2" />
+        </shape>
+    </item>
+
+    <!-- Giant ultra smooth bloom bottom right (Cyan/Blue) -->
+    <item android:top="0dp" android:left="-200dp" android:bottom="-600dp" android:right="-600dp">
+        <shape android:shape="oval">
+            <gradient android:type="radial" android:gradientRadius="1600dp"
+                android:centerX="0.5" android:centerY="0.5"
+                android:startColor="#150A84FF" android:endColor="#000A84FF" />
+        </shape>
+    </item>
+</layer-list>

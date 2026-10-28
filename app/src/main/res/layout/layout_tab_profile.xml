@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp"
+    android:paddingBottom="20dp">
+
+    <!-- Top Card - Auth / Profile -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btnLogin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="88dp"
+        android:paddingVertical="16dp"
+        android:paddingHorizontal="16dp"
+        android:background="@drawable/bg_glass_card"
+        android:clickable="true"
+        android:focusable="true">
+        <View
+            android:id="@+id/vAvatar"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/bg_glass_circle"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+        <ImageView
+            android:id="@+id/ivAvatarIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_profile"
+            app:tint="@color/white"
+            app:layout_constraintBottom_toBottomOf="@id/vAvatar"
+            app:layout_constraintEnd_toEndOf="@id/vAvatar"
+            app:layout_constraintStart_toStartOf="@id/vAvatar"
+            app:layout_constraintTop_toTopOf="@id/vAvatar" />
+        <TextView
+            android:id="@+id/tvUserTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
+            android:text="Гостевой доступ"
+            android:textColor="@color/colorTextPrimary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end"
+            app:layout_constraintBottom_toTopOf="@+id/tvUserSub"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/vAvatar"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_chainStyle="packed" />
+        <TextView
+            android:id="@+id/tvUserSub"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="3dp"
+            android:text="Нажмите для входа в аккаунт"
+            android:textColor="@color/colorTextSecondary"
+            android:textSize="12sp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/vAvatar"
+            app:layout_constraintTop_toBottomOf="@id/tvUserTitle" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Telegram 1-Click Link Card -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btnLinkTelegram"
+        android:layout_width="match_parent"
+        android:layout_height="62dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_glass_card"
+        android:clickable="true"
+        android:focusable="true"
+        android:paddingHorizontal="16dp">
+
+        <ImageView
+            android:id="@+id/ivTgIcon"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_telegram"
+            app:tint="#00E5FF"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvTelegramLinkTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="8dp"
+            android:text="Войти через Telegram"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end"
+            app:layout_constraintBottom_toTopOf="@id/tvTelegramLinkSub"
+            app:layout_constraintEnd_toStartOf="@id/ivTgArrow"
+            app:layout_constraintStart_toEndOf="@id/ivTgIcon"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_chainStyle="packed"/>
+
+        <TextView
+            android:id="@+id/tvTelegramLinkSub"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="8dp"
+            android:text="1 клик — автоматическая синхронизация"
+            android:textColor="#80FFFFFF"
+            android:textSize="11sp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/ivTgArrow"
+            app:layout_constraintStart_toEndOf="@id/ivTgIcon"
+            app:layout_constraintTop_toBottomOf="@id/tvTelegramLinkTitle"/>
+
+        <ImageView
+            android:id="@+id/ivTgArrow"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_arrow_back"
+            android:rotation="180"
+            app:tint="#4DFFFFFF"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Top Card - Premium -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/btnPremium"
+        android:layout_width="match_parent"
+        android:layout_height="68dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_premium_modern"
+        android:clickable="true"
+        android:focusable="true"
+        android:paddingHorizontal="20dp">
+        <ImageView
+            android:id="@+id/ivRocket"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_rocket"
+            app:tint="@color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+        <TextView
+            android:id="@+id/tvPremiumTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
+            android:text="Оформить PRO подписку"
+            android:textColor="@color/white"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/ivCrown"
+            app:layout_constraintStart_toEndOf="@id/ivRocket"
+            app:layout_constraintTop_toTopOf="parent" />
+        <ImageView
+            android:id="@+id/ivCrown"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@drawable/ic_crown"
+            app:tint="@color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ОСНОВНОЕ"
+        android:textColor="@color/colorTextSecondary"
+        android:textSize="12sp"
+        android:letterSpacing="0.08"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="10dp"/>
+
+    <!-- Bottom Menu - monolithic -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_glass_card">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dp">
+            <include layout="@layout/item_menu_modern" android:id="@+id/btnTelegram" android:layout_width="match_parent" android:layout_height="match_parent" />
+        </LinearLayout>
+        
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#1AFFFFFF" android:layout_marginHorizontal="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dp">
+            <include layout="@layout/item_menu_modern" android:id="@+id/btnRate" android:layout_width="match_parent" android:layout_height="match_parent" />
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#1AFFFFFF" android:layout_marginHorizontal="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dp">
+            <include layout="@layout/item_menu_modern" android:id="@+id/btnShare" android:layout_width="match_parent" android:layout_height="match_parent" />
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#1AFFFFFF" android:layout_marginHorizontal="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dp">
+            <include layout="@layout/item_menu_modern" android:id="@+id/btnAbout" android:layout_width="match_parent" android:layout_height="match_parent" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

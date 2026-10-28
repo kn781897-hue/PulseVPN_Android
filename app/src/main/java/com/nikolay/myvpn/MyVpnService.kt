@@ -1,6 +1,7 @@
 package com.nikolay.myvpn
 
 import android.app.*
+import android.content.Context
 import android.content.Intent
 import android.net.VpnService
 import android.os.*
@@ -8,12 +9,83 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.LondonX.tun2socks.Tun2Socks
 import libv2ray.*
+import java.io.File
 
 class MyVpnService : VpnService() {
 
     companion object {
+        const val PREFS_RUNNING = "VPN_RUNNING_STATE"
+        const val KEY_IS_RUNNING = "is_vpn_running"
+        const val KEY_START_TIME = "vpn_start_time"
+        const val ACTION_STATE_CHANGED = "com.nikolay.myvpn.VPN_STATE_CHANGED"
+        private const val FLAG_FILE = "vpn_active.flag"
+
         init {
             System.loadLibrary("tun2socks")
+        }
+
+        private fun getFlagFile(context: Context): File {
+            return File(context.filesDir, FLAG_FILE)
+        }
+
+        fun isVpnActive(context: Context): Boolean {
+            val flag = getFlagFile(context)
+            if (!flag.exists()) {
+                return false
+            }
+
+            // Проверяем, жив ли действительно сервис / процесс :vpn
+            val isRunning = isServiceRunning(context)
+            if (!isRunning) {
+                try { flag.delete() } catch (e: Exception) {}
+                val prefs = context.getSharedPreferences(PREFS_RUNNING, Context.MODE_PRIVATE)
+                prefs.edit().putBoolean(KEY_IS_RUNNING, false).commit()
+                return false
+            }
+            return true
+        }
+
+        private fun isServiceRunning(context: Context): Boolean {
+            try {
+                val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                    ?: return true
+
+                val processes = am.runningAppProcesses
+                if (processes != null) {
+                    val targetProcess = "${context.packageName}:vpn"
+                    for (proc in processes) {
+                        if (proc.processName == targetProcess) {
+                            return true
+                        }
+                    }
+                }
+
+                @Suppress("DEPRECATION")
+                val services = am.getRunningServices(Int.MAX_VALUE)
+                if (services != null) {
+                    val targetService = MyVpnService::class.java.name
+                    for (service in services) {
+                        if (service.service.className == targetService) {
+                            return true
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                return true
+            }
+            return false
+        }
+
+        fun getStartTime(context: Context): Long {
+            val flag = getFlagFile(context)
+            if (flag.exists()) {
+                val time = try { flag.readText().trim().toLongOrNull() } catch (e: Exception) { null }
+                if (time != null && time > 0) {
+                    return time
+                }
+            }
+            val prefs = context.getSharedPreferences(PREFS_RUNNING, Context.MODE_PRIVATE)
+            return prefs.getLong(KEY_START_TIME, System.currentTimeMillis())
         }
     }
 
@@ -27,13 +99,43 @@ class MyVpnService : VpnService() {
     @Volatile
     private var running = false
 
-    // ===================== SERVICE =====================
+    private var activeServerIp = ""
+    private var activeServerPort = 0
+    private var activeUuid = "768b8f55-440a-4528-9cac-db50c91e50b1"
+    private var activeProtocol = "vless"
+    private var activeSecurity = "tls"
+    private var activeNetwork = "ws"
+    private var activePath = "/vpn"
+    private var activeSni = "sub.pulsevpn.shop"
+    private var activePublicKey = "QbXfKUUrYUHJhdbGrTPDBMt57AMRD17yYQMf3RDEMVI"
+    private var activeShortId = "283b35fcf8fc"
+    private var activeFingerprint = "chrome"
+    private var activeFlow = "xtls-rprx-vision"
+
+    // сервис
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "STOP") {
             stopVpn()
             return START_NOT_STICKY
         }
+
+        val config = ServerConfigManager.getConfig(this)
+        activeServerIp = intent?.getStringExtra("SERVER_IP")?.takeIf { it.isNotBlank() } ?: config.ip
+        val portExtra = intent?.getIntExtra("SERVER_PORT", 0) ?: 0
+        activeServerPort = if (portExtra > 0) portExtra else config.port
+        intent?.getStringExtra("SERVER_UUID")?.let { uid ->
+            if (uid.isNotBlank()) activeUuid = uid
+        }
+        activeProtocol = intent?.getStringExtra("SERVER_PROTOCOL")?.takeIf { it.isNotBlank() } ?: config.protocol
+        activeSecurity = intent?.getStringExtra("SERVER_SECURITY")?.takeIf { it.isNotBlank() } ?: config.security
+        activeNetwork = intent?.getStringExtra("SERVER_NETWORK")?.takeIf { it.isNotBlank() } ?: config.network
+        activePath = intent?.getStringExtra("SERVER_PATH")?.takeIf { it.isNotBlank() } ?: config.path
+        activeSni = intent?.getStringExtra("SERVER_SNI")?.takeIf { it.isNotBlank() } ?: config.sni
+        activePublicKey = intent?.getStringExtra("SERVER_PUBLIC_KEY")?.takeIf { it.isNotBlank() } ?: config.publicKey
+        activeShortId = intent?.getStringExtra("SERVER_SHORT_ID")?.takeIf { it.isNotBlank() } ?: config.shortId
+        activeFingerprint = intent?.getStringExtra("SERVER_FINGERPRINT")?.takeIf { it.isNotBlank() } ?: config.fingerprint
+        activeFlow = intent?.getStringExtra("SERVER_FLOW")?.takeIf { it.isNotBlank() } ?: config.flow
 
         if (running) return START_STICKY
 
@@ -46,15 +148,36 @@ class MyVpnService : VpnService() {
     override fun onRevoke() {
         Log.d(TAG, "VPN revoked by system")
         stopInternal()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
         super.onRevoke()
     }
 
     override fun onDestroy() {
+        stopInternal()
         super.onDestroy()
-        // НИЧЕГО не делаем
     }
 
-    // ===================== START =====================
+    // старт
+
+    private fun copyAssets() {
+        val files = listOf("geoip.dat", "geosite.dat")
+        for (fileName in files) {
+            val file = File(filesDir, fileName)
+            if (!file.exists() || file.length() == 0L) {
+                try {
+                    assets.open(fileName).use { input ->
+                        java.io.FileOutputStream(file).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    Log.d(TAG, "Asset copied: $fileName (${file.length()} bytes)")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error copying $fileName: ${e.message}")
+                }
+            }
+        }
+    }
 
     private fun startVpn() {
         synchronized(this) {
@@ -63,6 +186,21 @@ class MyVpnService : VpnService() {
         }
 
         try {
+            copyAssets()
+
+            try {
+                Tun2Socks.initialize(this)
+            } catch (e: Throwable) {
+                Log.w(TAG, "Tun2Socks.initialize: ${e.message}")
+            }
+
+            try {
+                val deviceId = SubscriptionManager.getDeviceId(this)
+                Libv2ray.initCoreEnv(filesDir.absolutePath, deviceId)
+            } catch (e: Throwable) {
+                Log.w(TAG, "Libv2ray.initCoreEnv: ${e.message}")
+            }
+
             val builder = Builder()
                 .setSession("Pulse VPN")
                 .setMtu(1280)
@@ -110,22 +248,39 @@ class MyVpnService : VpnService() {
 
             tunThread!!.start()
 
+            // Сохраняем состояние для надежной синхронизации с UI и между процессами
+            val startTime = System.currentTimeMillis()
+            try {
+                val flag = getFlagFile(this)
+                flag.writeText(startTime.toString())
+            } catch (e: Exception) {
+                Log.e(TAG, "Error writing vpn flag", e)
+            }
+
+            val prefs = getSharedPreferences(PREFS_RUNNING, Context.MODE_PRIVATE)
+            prefs.edit()
+                .putBoolean(KEY_IS_RUNNING, true)
+                .putLong(KEY_START_TIME, startTime)
+                .commit()
+            sendBroadcast(Intent(ACTION_STATE_CHANGED).putExtra("RUNNING", true))
+
         } catch (e: Exception) {
             Log.e(TAG, "VPN start error", e)
             stopVpn()
         }
     }
 
-    // ===================== STOP =====================
+    // стоп
 
     private fun stopVpn() {
+        Log.d(TAG, "Stopping VPN service gracefully")
         stopInternal()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
 
-        // ❗ КЛЮЧЕВОЕ МЕСТО ❗
-        // tun2socks AAR нельзя перезапускать — убиваем процесс
-        android.os.Process.killProcess(android.os.Process.myPid())
+        Handler(Looper.getMainLooper()).postDelayed({
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }, 500)
     }
 
     private fun stopInternal() {
@@ -135,6 +290,16 @@ class MyVpnService : VpnService() {
         }
 
         try {
+            getFlagFile(this).delete()
+        } catch (e: Exception) {}
+
+        // Сбрасываем сохраненное состояние
+        val prefs = getSharedPreferences(PREFS_RUNNING, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_IS_RUNNING, false).commit()
+        sendBroadcast(Intent(ACTION_STATE_CHANGED).putExtra("RUNNING", false))
+
+        try {
+            Log.d(TAG, "Stopping v2ray core")
             coreController?.stopLoop()
             coreController = null
         } catch (e: Exception) {
@@ -142,16 +307,21 @@ class MyVpnService : VpnService() {
         }
 
         try {
-            vpnInterface?.close()   // ← закрытие TUN восстанавливает интернет
+            Log.d(TAG, "Closing VPN interface")
+            vpnInterface?.close()   // закрытие TUN восстанавливает интернет
             vpnInterface = null
         } catch (e: Exception) {
             Log.e(TAG, "tun close error", e)
         }
 
+        try {
+            Tun2Socks.stopTun2Socks()
+        } catch (e: Exception) {}
+
         tunThread = null
     }
 
-    // ===================== NOTIFICATION =====================
+    // уведы
 
     private fun createNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -180,27 +350,97 @@ class MyVpnService : VpnService() {
             .build()
     }
 
-    // ===================== CONFIG =====================
+    // конфиг
 
     private fun buildV2RayConfig(): String {
-        val serverIp = "31.58.87.8"
-        val port = 80
-        val uuid = "768b8f55-440a-4528-9cac-db50c91e50b1"
+        val serverIp = activeServerIp
+        val port = activeServerPort
+        val uuid = activeUuid
+        val protocol = activeProtocol.lowercase()
+        val security = activeSecurity.lowercase()
+        val network = activeNetwork.lowercase()
+        val path = if (activePath.isNotBlank()) activePath else "/vpn"
+        val sni = activeSni
+        val pubKey = activePublicKey
+        val shortId = activeShortId
+        val fingerprint = activeFingerprint
+        val flow = activeFlow
 
-        return """
-        {
-          "log": { "loglevel": "none" },
-          "inbounds": [
+        val proxyOutbound = if (protocol == "vless" && security == "reality") {
+            """
             {
-              "port": 10808,
-              "listen": "127.0.0.1",
-              "protocol": "socks",
-              "settings": { "udp": true }
+              "protocol": "vless",
+              "tag": "proxy",
+              "settings": {
+                "vnext": [
+                  {
+                    "address": "$serverIp",
+                    "port": $port,
+                    "users": [
+                      {
+                        "id": "$uuid",
+                        "encryption": "none",
+                        "flow": "$flow"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "streamSettings": {
+                "network": "tcp",
+                "security": "reality",
+                "realitySettings": {
+                  "show": false,
+                  "fingerprint": "$fingerprint",
+                  "serverName": "$sni",
+                  "publicKey": "$pubKey",
+                  "shortId": "$shortId",
+                  "spiderX": ""
+                }
+              }
             }
-          ],
-          "outbounds": [
+            """.trimIndent()
+        } else if (protocol == "vless") {
+            // VLESS-WebSocket через Cloudflare CDN (100% Анти-Блокировка для РФ)
+            """
+            {
+              "protocol": "vless",
+              "tag": "proxy",
+              "settings": {
+                "vnext": [
+                  {
+                    "address": "$serverIp",
+                    "port": $port,
+                    "users": [
+                      {
+                        "id": "$uuid",
+                        "encryption": "none"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "streamSettings": {
+                "network": "ws",
+                "security": "tls",
+                "tlsSettings": {
+                  "serverName": "$sni",
+                  "fingerprint": "chrome"
+                },
+                "wsSettings": {
+                  "path": "$path",
+                  "headers": {
+                    "Host": "$sni"
+                  }
+                }
+              }
+            }
+            """.trimIndent()
+        } else {
+            """
             {
               "protocol": "vmess",
+              "tag": "proxy",
               "settings": {
                 "vnext": [
                   {
@@ -214,8 +454,33 @@ class MyVpnService : VpnService() {
               },
               "streamSettings": {
                 "network": "ws",
-                "wsSettings": { "path": "/" }
+                "wsSettings": {
+                  "path": "/",
+                  "headers": {
+                    "Host": "pulsevpn.shop"
+                  }
+                }
               }
+            }
+            """.trimIndent()
+        }
+
+        return """
+        {
+          "log": { "loglevel": "none" },
+          "inbounds": [
+            {
+              "port": 10808,
+              "listen": "127.0.0.1",
+              "protocol": "socks",
+              "settings": { "udp": true }
+            }
+          ],
+          "outbounds": [
+            $proxyOutbound,
+            {
+              "protocol": "freedom",
+              "tag": "direct"
             }
           ]
         }

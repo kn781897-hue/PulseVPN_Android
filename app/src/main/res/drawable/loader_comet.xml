@@ -9,9 +9,9 @@
     <gradient
         android:type="sweep"
         android:centerY="0.5"
-        android:startColor="#00FFD54F"
-        android:endColor="#FFFFD54F" />
+        android:startColor="#000A84FF"
+        android:endColor="#FF0A84FF" />
 
-    <!-- startColor = Прозрачный золотой -->
-    <!-- endColor   = Яркий Золотой (#FFD54F - цвет солнца) -->
+    <!-- startColor = Transparent Neon Blue -->
+    <!-- endColor   = Bright Neon Blue (#0A84FF) -->
 </shape>
