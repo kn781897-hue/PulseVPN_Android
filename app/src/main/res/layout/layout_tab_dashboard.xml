@@ -129,7 +129,7 @@
                     android:id="@+id/tvIpProto"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="217.60.249.186 · VMess"
+                    android:text="31.59.136.18 · VLESS CDN"
                     android:textColor="#00E5FF" 
                     android:textSize="11sp"
                     android:ellipsize="end"
