@@ -10,13 +10,13 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 data class ServerConfig(
-    val ip: String = "sub.pulsevpn.shop",
-    val port: Int = 443,
+    val ip: String = "31.59.136.18",
+    val port: Int = 2082,
     val protocol: String = "vless",
-    val security: String = "tls",
-    val network: String = "ws",
-    val path: String = "/vpn",
-    val sni: String = "sub.pulsevpn.shop",
+    val security: String = "reality",
+    val network: String = "tcp",
+    val path: String = "",
+    val sni: String = "www.microsoft.com",
     val publicKey: String = "QbXfKUUrYUHJhdbGrTPDBMt57AMRD17yYQMf3RDEMVI",
     val shortId: String = "283b35fcf8fc",
     val fingerprint: String = "chrome",
