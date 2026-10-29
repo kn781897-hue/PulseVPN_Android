@@ -16,10 +16,10 @@ data class ServerConfig(
     val security: String = "reality",
     val network: String = "tcp",
     val path: String = "",
-    val sni: String = "www.microsoft.com",
+    val sni: String = "pulsevpn.shop",
     val publicKey: String = "QbXfKUUrYUHJhdbGrTPDBMt57AMRD17yYQMf3RDEMVI",
     val shortId: String = "283b35fcf8fc",
-    val fingerprint: String = "chrome",
+    val fingerprint: String = "firefox",
     val flow: String = "xtls-rprx-vision"
 )
 

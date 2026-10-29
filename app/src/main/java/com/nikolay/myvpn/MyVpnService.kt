@@ -103,13 +103,13 @@ class MyVpnService : VpnService() {
     private var activeServerPort = 0
     private var activeUuid = "768b8f55-440a-4528-9cac-db50c91e50b1"
     private var activeProtocol = "vless"
-    private var activeSecurity = "tls"
-    private var activeNetwork = "ws"
-    private var activePath = "/vpn"
-    private var activeSni = "sub.pulsevpn.shop"
+    private var activeSecurity = "reality"
+    private var activeNetwork = "tcp"
+    private var activePath = ""
+    private var activeSni = "pulsevpn.shop"
     private var activePublicKey = "QbXfKUUrYUHJhdbGrTPDBMt57AMRD17yYQMf3RDEMVI"
     private var activeShortId = "283b35fcf8fc"
-    private var activeFingerprint = "chrome"
+    private var activeFingerprint = "firefox"
     private var activeFlow = "xtls-rprx-vision"
 
     // сервис
