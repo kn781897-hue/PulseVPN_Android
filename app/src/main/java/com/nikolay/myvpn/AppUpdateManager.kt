@@ -64,8 +64,10 @@ object AppUpdateManager {
             .get()
             .addOnSuccessListener { snapshot ->
                 if (snapshot != null && snapshot.exists()) {
-                    val code = snapshot.getLong("latestVersionCode")?.toInt() ?: 0
-                    val name = snapshot.getString("latestVersionName") ?: ""
+                    val code = snapshot.getLong("latestVersionCode")?.toInt()
+                        ?: snapshot.getLong("versionCode")?.toInt() ?: 0
+                    val name = snapshot.getString("latestVersionName")
+                        ?: snapshot.getString("versionName") ?: "2.0"
                     val url = snapshot.getString("apkUrl")
                         ?: "https://sub.pulsevpn.shop/downloads/PulseVPN-Android.apk"
                     val changelog = snapshot.getString("changelog") ?: "Доступна новая версия Pulse VPN."
@@ -111,11 +113,11 @@ object AppUpdateManager {
                     if (!body.isNullOrBlank()) {
                         val json = JSONObject(body)
                         val info = UpdateInfo(
-                            versionCode = json.optInt("latestVersionCode", 0),
-                            versionName = json.optString("latestVersionName", ""),
+                            versionCode = if (json.has("latestVersionCode")) json.optInt("latestVersionCode", 0) else json.optInt("versionCode", 0),
+                            versionName = if (json.has("latestVersionName")) json.optString("latestVersionName", "2.0") else json.optString("versionName", "2.0"),
                             apkUrl = json.optString(
                                 "apkUrl",
-                                "https://sub.pulsevpn.shop/downloads/PulseVPN-Android.apk"
+                                "https://pulsevpn.shop/downloads/PulseVPN-Android.apk"
                             ),
                             changelog = json.optString(
                                 "changelog",

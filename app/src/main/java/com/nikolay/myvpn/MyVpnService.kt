@@ -369,7 +369,7 @@ class MyVpnService : VpnService() {
         val pubKey = activePublicKey
         val shortId = activeShortId
         val fingerprint = activeFingerprint
-        val flow = activeFlow
+        val flow = if (activeFlow.isNotBlank()) activeFlow else "xtls-rprx-vision"
 
         val proxyOutbound = if (protocol == "vless" && security == "reality") {
             """
