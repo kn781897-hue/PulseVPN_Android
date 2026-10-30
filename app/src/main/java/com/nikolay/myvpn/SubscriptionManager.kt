@@ -272,6 +272,10 @@ object SubscriptionManager {
     // Извлечение чистого sub_id из введенного текста или полной ссылки
     fun extractSubId(input: String): String {
         var str = input.trim()
+        if (str.startsWith("vless://")) {
+            val uuidPart = str.removePrefix("vless://").substringBefore("@").trim()
+            if (uuidPart.isNotEmpty()) return uuidPart
+        }
         if (str.contains("/getsub/")) {
             str = str.substringAfter("/getsub/")
         } else if (str.contains("/connect/")) {
@@ -312,7 +316,7 @@ object SubscriptionManager {
         }
     }
 
-    // Проверка sub_id через сервер подписок PulseVPN (https://sub.pulsevpn.shop/getsub/)
+    // Проверка sub_id через сервер подписок PulseVPN (https://pulsevpn.shop/getsub/ или https://sub.pulsevpn.shop/getsub/)
     private fun checkXuiSubscription(
         subId: String,
         callback: (success: Boolean, expiryMs: Long, extractedUuid: String?) -> Unit
@@ -323,14 +327,35 @@ object SubscriptionManager {
                     .connectTimeout(10, TimeUnit.SECONDS)
                     .readTimeout(10, TimeUnit.SECONDS)
                     .build()
-                val url = "https://sub.pulsevpn.shop/getsub/$subId"
-                val request = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", "PulseVPN-Android")
-                    .build()
 
-                val response = client.newCall(request).execute()
-                if (!response.isSuccessful) {
+                // 1. Пробуем https://pulsevpn.shop/getsub/$subId
+                var response = try {
+                    client.newCall(
+                        Request.Builder()
+                            .url("https://pulsevpn.shop/getsub/$subId")
+                            .header("User-Agent", "PulseVPN-Android")
+                            .build()
+                    ).execute()
+                } catch (e: Exception) { null }
+
+                // 2. Fallback на https://sub.pulsevpn.shop/getsub/$subId
+                if (response == null || !response.isSuccessful) {
+                    response = try {
+                        client.newCall(
+                            Request.Builder()
+                                .url("https://sub.pulsevpn.shop/getsub/$subId")
+                                .header("User-Agent", "PulseVPN-Android")
+                                .build()
+                        ).execute()
+                    } catch (e: Exception) { null }
+                }
+
+                if (response == null || !response.isSuccessful) {
+                    // Если передан напрямую валидный UUID vless (36 символов)
+                    if (subId.length == 36 && subId.count { it == '-' } == 4) {
+                        callback(true, 0L, subId)
+                        return@Thread
+                    }
                     callback(false, 0L, null)
                     return@Thread
                 }

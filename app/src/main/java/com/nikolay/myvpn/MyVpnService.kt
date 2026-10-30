@@ -224,6 +224,11 @@ class MyVpnService : VpnService() {
 
             coreController!!.startLoop(buildV2RayConfig())
 
+            // Небольшая задержка, чтобы ядро Xray успело открыться и слушать порт 10808 перед tun2socks
+            try {
+                Thread.sleep(150)
+            } catch (e: InterruptedException) {}
+
             tunThread = Thread {
                 try {
                     Log.d(TAG, "tun2socks start")
@@ -369,8 +374,8 @@ class MyVpnService : VpnService() {
         val proxyOutbound = if (protocol == "vless" && security == "reality") {
             """
             {
-              "protocol": "vless",
               "tag": "proxy",
+              "protocol": "vless",
               "settings": {
                 "vnext": [
                   {
@@ -395,17 +400,22 @@ class MyVpnService : VpnService() {
                   "serverName": "$sni",
                   "publicKey": "$pubKey",
                   "shortId": "$shortId",
-                  "spiderX": ""
+                  "spiderX": "/"
+                },
+                "tcpSettings": {
+                  "header": {
+                    "type": "none"
+                  }
                 }
               }
             }
             """.trimIndent()
         } else if (protocol == "vless") {
-            // VLESS-WebSocket через Cloudflare CDN (100% Анти-Блокировка для РФ)
+            // VLESS-WebSocket через Cloudflare CDN
             """
             {
-              "protocol": "vless",
               "tag": "proxy",
+              "protocol": "vless",
               "settings": {
                 "vnext": [
                   {
@@ -439,8 +449,8 @@ class MyVpnService : VpnService() {
         } else {
             """
             {
-              "protocol": "vmess",
               "tag": "proxy",
+              "protocol": "vmess",
               "settings": {
                 "vnext": [
                   {
@@ -467,22 +477,71 @@ class MyVpnService : VpnService() {
 
         return """
         {
-          "log": { "loglevel": "none" },
+          "log": { "loglevel": "warning" },
+          "policy": {
+            "system": {
+              "statsOutboundDownlink": true,
+              "statsInboundDownlink": true,
+              "statsInboundUplink": true,
+              "statsOutboundUplink": true
+            }
+          },
+          "dns": {
+            "servers": [
+              "1.1.1.1",
+              {
+                "address": "1.1.1.1",
+                "port": 53,
+                "skipFallback": false
+              },
+              {
+                "address": "8.8.8.8",
+                "port": 53,
+                "skipFallback": false
+              }
+            ],
+            "disableCache": false,
+            "disableFallback": false,
+            "queryStrategy": "UseIPv4"
+          },
           "inbounds": [
             {
+              "tag": "socks",
               "port": 10808,
               "listen": "127.0.0.1",
               "protocol": "socks",
-              "settings": { "udp": true }
+              "settings": {
+                "udp": true
+              },
+              "sniffing": {
+                "enabled": true,
+                "destOverride": [
+                  "quic",
+                  "tls",
+                  "http"
+                ],
+                "routeOnly": false
+              }
             }
           ],
           "outbounds": [
             $proxyOutbound,
             {
+              "tag": "block",
+              "protocol": "blackhole",
+              "settings": {
+                "response": {
+                  "type": "none"
+                }
+              }
+            },
+            {
+              "tag": "direct",
               "protocol": "freedom",
-              "tag": "direct"
+              "settings": {}
             }
-          ]
+          ],
+          "stats": {}
         }
         """.trimIndent()
     }
