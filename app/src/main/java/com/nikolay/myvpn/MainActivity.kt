@@ -581,7 +581,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startVpnService() {
-        val customUuid = SubscriptionManager.getCustomUuid(this) ?: "768b8f55-440a-4528-9cac-db50c91e50b1"
+        val customUuid = SubscriptionManager.getCustomUuid(this) ?: "d8352dcf-0a64-41cf-bb80-94ea6a1d30d7"
         val config = ServerConfigManager.getConfig(this)
         val intent = Intent(this, MyVpnService::class.java).apply {
             action = "START"

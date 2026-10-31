@@ -101,7 +101,7 @@ class MyVpnService : VpnService() {
 
     private var activeServerIp = ""
     private var activeServerPort = 0
-    private var activeUuid = "768b8f55-440a-4528-9cac-db50c91e50b1"
+    private var activeUuid = "d8352dcf-0a64-41cf-bb80-94ea6a1d30d7"
     private var activeProtocol = "vless"
     private var activeSecurity = "reality"
     private var activeNetwork = "tcp"
@@ -205,11 +205,18 @@ class MyVpnService : VpnService() {
                 .setSession("Pulse VPN")
                 .setMtu(1280)
                 .addAddress("10.0.1.1", 24)
-                .addRoute("0.0.0.0", 0)
                 .addDnsServer("8.8.8.8")
                 .addDnsServer("1.1.1.1")
 
-            builder.addDisallowedApplication(packageName)
+            // Исключаем IP сервера VPN из маршрутизации TUN, чтобы избежать зацикливания трафика (routing loop)
+            val serverTargetIp = activeServerIp.ifBlank { "31.59.136.18" }
+            addRoutesExcludingIp(builder, serverTargetIp)
+
+            try {
+                builder.addDisallowedApplication(packageName)
+            } catch (e: Exception) {
+                Log.w(TAG, "addDisallowedApplication failed: ${e.message}")
+            }
 
             val pfd = builder.establish()
                 ?: throw IllegalStateException("VPN interface null")
@@ -217,16 +224,27 @@ class MyVpnService : VpnService() {
             vpnInterface = pfd
 
             coreController = Libv2ray.newCoreController(object : CoreCallbackHandler {
-                override fun onEmitStatus(p0: Long, p1: String?) = 0L
-                override fun startup() = 0L
-                override fun shutdown() = 0L
+                override fun onEmitStatus(p0: Long, p1: String?): Long {
+                    Log.i("XrayCore", "[$p0] ${p1.orEmpty()}")
+                    return 0L
+                }
+                override fun startup(): Long {
+                    Log.i("XrayCore", "Xray core started successfully")
+                    return 0L
+                }
+                override fun shutdown(): Long {
+                    Log.i("XrayCore", "Xray core shutdown")
+                    return 0L
+                }
             })
 
-            coreController!!.startLoop(buildV2RayConfig())
+            val v2rayConfig = buildV2RayConfig()
+            Log.d(TAG, "Starting Xray with config:\n$v2rayConfig")
+            coreController!!.startLoop(v2rayConfig)
 
-            // Небольшая задержка, чтобы ядро Xray успело открыться и слушать порт 10808 перед tun2socks
+            // Задержка, чтобы ядро Xray успело открыться и слушать порт 10808 перед tun2socks
             try {
-                Thread.sleep(150)
+                Thread.sleep(300)
             } catch (e: InterruptedException) {}
 
             tunThread = Thread {
@@ -355,20 +373,60 @@ class MyVpnService : VpnService() {
             .build()
     }
 
+    // маршрутизация без зацикливания
+
+    private fun addRoutesExcludingIp(builder: Builder, serverIpStr: String) {
+        try {
+            val address = java.net.InetAddress.getByName(serverIpStr)
+            val bytes = address.address
+            if (bytes.size != 4) {
+                Log.w(TAG, "Server IP is not IPv4 ($serverIpStr), falling back to 0.0.0.0/0")
+                builder.addRoute("0.0.0.0", 0)
+                return
+            }
+
+            var targetInt = 0L
+            for (b in bytes) {
+                targetInt = (targetInt shl 8) or (b.toLong() and 0xFFL)
+            }
+
+            var curr = 0L
+            for (i in 0 until 32) {
+                val bit = ((targetInt ushr (31 - i)) and 1L)
+                val siblingInt = curr or ((1L - bit) shl (31 - i))
+                val siblingIp = String.format(
+                    java.util.Locale.US,
+                    "%d.%d.%d.%d",
+                    (siblingInt ushr 24) and 0xFFL,
+                    (siblingInt ushr 16) and 0xFFL,
+                    (siblingInt ushr 8) and 0xFFL,
+                    siblingInt and 0xFFL
+                )
+                val prefixLength = i + 1
+                builder.addRoute(siblingIp, prefixLength)
+                curr = curr or (bit shl (31 - i))
+            }
+            Log.d(TAG, "Successfully added 32 CIDR routes excluding server IP ($serverIpStr)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to compute excluded routes for $serverIpStr, falling back to 0.0.0.0/0", e)
+            builder.addRoute("0.0.0.0", 0)
+        }
+    }
+
     // конфиг
 
     private fun buildV2RayConfig(): String {
-        val serverIp = activeServerIp
-        val port = activeServerPort
-        val uuid = activeUuid
+        val serverIp = activeServerIp.ifBlank { "31.59.136.18" }
+        val port = if (activeServerPort > 0) activeServerPort else 2082
+        val uuid = activeUuid.ifBlank { "d8352dcf-0a64-41cf-bb80-94ea6a1d30d7" }
         val protocol = activeProtocol.lowercase()
         val security = activeSecurity.lowercase()
         val network = activeNetwork.lowercase()
         val path = if (activePath.isNotBlank()) activePath else "/vpn"
-        val sni = activeSni
-        val pubKey = activePublicKey
-        val shortId = activeShortId
-        val fingerprint = activeFingerprint
+        val sni = activeSni.ifBlank { "pulsevpn.shop" }
+        val pubKey = activePublicKey.ifBlank { "QbXfKUUrYUHJhdbGrTPDBMt57AMRD17yYQMf3RDEMVI" }
+        val shortId = activeShortId.ifBlank { "283b35fcf8fc" }
+        val fingerprint = activeFingerprint.ifBlank { "firefox" }
         val flow = if (activeFlow.isNotBlank()) activeFlow else "xtls-rprx-vision"
 
         val proxyOutbound = if (protocol == "vless" && security == "reality") {
@@ -377,19 +435,11 @@ class MyVpnService : VpnService() {
               "tag": "proxy",
               "protocol": "vless",
               "settings": {
-                "vnext": [
-                  {
-                    "address": "$serverIp",
-                    "port": $port,
-                    "users": [
-                      {
-                        "id": "$uuid",
-                        "encryption": "none",
-                        "flow": "$flow"
-                      }
-                    ]
-                  }
-                ]
+                "address": "$serverIp",
+                "port": $port,
+                "id": "$uuid",
+                "encryption": "none",
+                "flow": "$flow"
               },
               "streamSettings": {
                 "network": "tcp",
@@ -477,7 +527,7 @@ class MyVpnService : VpnService() {
 
         return """
         {
-          "log": { "loglevel": "warning" },
+          "log": { "loglevel": "debug" },
           "policy": {
             "system": {
               "statsOutboundDownlink": true,
