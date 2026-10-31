@@ -67,7 +67,7 @@ object AppUpdateManager {
                     val code = snapshot.getLong("latestVersionCode")?.toInt()
                         ?: snapshot.getLong("versionCode")?.toInt() ?: 0
                     val name = snapshot.getString("latestVersionName")
-                        ?: snapshot.getString("versionName") ?: "2.0"
+                        ?: snapshot.getString("versionName") ?: "2.1"
                     val url = snapshot.getString("apkUrl")
                         ?: "https://sub.pulsevpn.shop/downloads/PulseVPN-Android.apk"
                     val changelog = snapshot.getString("changelog") ?: "Доступна новая версия Pulse VPN."
@@ -114,7 +114,7 @@ object AppUpdateManager {
                         val json = JSONObject(body)
                         val info = UpdateInfo(
                             versionCode = if (json.has("latestVersionCode")) json.optInt("latestVersionCode", 0) else json.optInt("versionCode", 0),
-                            versionName = if (json.has("latestVersionName")) json.optString("latestVersionName", "2.0") else json.optString("versionName", "2.0"),
+                            versionName = if (json.has("latestVersionName")) json.optString("latestVersionName", "2.1") else json.optString("versionName", "2.1"),
                             apkUrl = json.optString(
                                 "apkUrl",
                                 "https://pulsevpn.shop/downloads/PulseVPN-Android.apk"

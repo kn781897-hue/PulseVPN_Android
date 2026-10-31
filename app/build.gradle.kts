@@ -14,8 +14,8 @@ android {
         applicationId = "com.nikolay.myvpn"
         minSdk = 24
         targetSdk = 34
-        versionCode = 16
-        versionName = "2.0"
+        versionCode = 17
+        versionName = "2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
