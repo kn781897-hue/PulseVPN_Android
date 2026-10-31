@@ -673,14 +673,23 @@ class MainActivity : AppCompatActivity() {
     private fun updatePing() {
         thread {
             try {
-                val start = System.currentTimeMillis()
-                val socket = java.net.Socket()
-                socket.connect(java.net.InetSocketAddress("1.1.1.1", 53), 2000)
-                val pingResult = (System.currentTimeMillis() - start).toString()
-                socket.close()
+                val process = Runtime.getRuntime().exec("/system/bin/ping -c 1 -W 1 8.8.8.8")
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                var pingResult = "0"
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    if (line?.contains("time=") == true) {
+                        val start = line!!.indexOf("time=") + 5
+                        val end = line!!.indexOf(" ms")
+                        if (start != -1 && end != -1) {
+                            pingResult = line!!.substring(start, end).toFloat().toInt().toString()
+                        }
+                    }
+                }
+                process.waitFor()
                 handler.post { tvPing.text = pingResult }
             } catch (e: Exception) {
-                handler.post { tvPing.text = "45" }
+                handler.post { tvPing.text = "0" }
             }
         }.also {
             handler.postDelayed({ if (isUpdatingStats) updatePing() }, 5000)

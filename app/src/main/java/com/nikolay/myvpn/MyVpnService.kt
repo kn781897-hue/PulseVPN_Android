@@ -3,7 +3,6 @@ package com.nikolay.myvpn
 import android.app.*
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.*
 import android.util.Log
@@ -121,9 +120,6 @@ class MyVpnService : VpnService() {
             return START_NOT_STICKY
         }
 
-        // Всегда сразу вызываем startForegroundCompat, чтобы удовлетворить контракт Android 14+
-        startForegroundCompat()
-
         val config = ServerConfigManager.getConfig(this)
         activeServerIp = intent?.getStringExtra("SERVER_IP")?.takeIf { it.isNotBlank() } ?: config.ip
         val portExtra = intent?.getIntExtra("SERVER_PORT", 0) ?: 0
@@ -143,6 +139,7 @@ class MyVpnService : VpnService() {
 
         if (running) return START_STICKY
 
+        startForeground(1, createNotification())
         Thread { startVpn() }.start()
 
         return START_STICKY
@@ -206,7 +203,7 @@ class MyVpnService : VpnService() {
 
             val builder = Builder()
                 .setSession("Pulse VPN")
-                .setMtu(1500)
+                .setMtu(1280)
                 .addAddress("10.0.1.1", 24)
                 .addDnsServer("8.8.8.8")
                 .addDnsServer("1.1.1.1")
@@ -256,7 +253,7 @@ class MyVpnService : VpnService() {
                     Tun2Socks.startTun2Socks(
                         Tun2Socks.LogLevel.INFO,
                         pfd,
-                        1500,
+                        1280,
                         "127.0.0.1",
                         10808,
                         "10.0.1.2",
@@ -376,75 +373,15 @@ class MyVpnService : VpnService() {
             .build()
     }
 
-    private fun startForegroundCompat() {
-        val notification = createNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            val fgsType = ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED or ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            try {
-                startForeground(1, notification, fgsType)
-            } catch (e: Throwable) {
-                try {
-                    startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-                } catch (e2: Throwable) {
-                    startForeground(1, notification)
-                }
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try {
-                startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-            } catch (e: Throwable) {
-                startForeground(1, notification)
-            }
-        } else {
-            startForeground(1, notification)
-        }
-    }
-
-    // маршрутизация: перенаправляем весь публичный интернет в TUN,
-    // минуя локальную сеть Wi-Fi (192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12)
-    // и исключая сам IP сервера VPN (31.59.136.18) во избежание взаимной блокировки шлюза
+    // маршрутизация без зацикливания
 
     private fun addRoutesExcludingIp(builder: Builder, serverIpStr: String) {
-        val standardBypassLan = listOf(
-            "0.0.0.0" to 5,
-            "8.0.0.0" to 7,
-            "11.0.0.0" to 8,
-            "12.0.0.0" to 6,
-            "16.0.0.0" to 4,
-            "32.0.0.0" to 3,
-            "64.0.0.0" to 2,
-            "128.0.0.0" to 3,
-            "160.0.0.0" to 5,
-            "168.0.0.0" to 6,
-            "172.0.0.0" to 12,
-            "172.32.0.0" to 11,
-            "172.64.0.0" to 10,
-            "172.128.0.0" to 9,
-            "173.0.0.0" to 8,
-            "174.0.0.0" to 7,
-            "176.0.0.0" to 4,
-            "192.0.0.0" to 9,
-            "192.128.0.0" to 11,
-            "192.160.0.0" to 13,
-            "192.169.0.0" to 16,
-            "192.170.0.0" to 15,
-            "192.172.0.0" to 14,
-            "192.176.0.0" to 12,
-            "192.192.0.0" to 10,
-            "193.0.0.0" to 8,
-            "194.0.0.0" to 7,
-            "196.0.0.0" to 6,
-            "200.0.0.0" to 5,
-            "208.0.0.0" to 4
-        )
-
         try {
-            val targetAddr = java.net.InetAddress.getByName(serverIpStr)
-            val bytes = targetAddr.address
+            val address = java.net.InetAddress.getByName(serverIpStr)
+            val bytes = address.address
             if (bytes.size != 4) {
-                for ((ip, prefix) in standardBypassLan) {
-                    builder.addRoute(ip, prefix)
-                }
+                Log.w(TAG, "Server IP is not IPv4 ($serverIpStr), falling back to 0.0.0.0/0")
+                builder.addRoute("0.0.0.0", 0)
                 return
             }
 
@@ -453,48 +390,26 @@ class MyVpnService : VpnService() {
                 targetInt = (targetInt shl 8) or (b.toLong() and 0xFFL)
             }
 
-            var addedCount = 0
-            for ((baseIp, basePrefix) in standardBypassLan) {
-                val baseAddr = java.net.InetAddress.getByName(baseIp)
-                var baseInt = 0L
-                for (b in baseAddr.address) {
-                    baseInt = (baseInt shl 8) or (b.toLong() and 0xFFL)
-                }
-
-                val mask = (-1L shl (32 - basePrefix)) and 0xFFFFFFFFL
-                val targetNet = targetInt and mask
-                val baseNet = baseInt and mask
-
-                if (targetNet == baseNet) {
-                    // Целевой IP сервера находится внутри этого блока! Дробим блок, исключая целевой IP
-                    var curr = baseInt
-                    for (i in basePrefix until 32) {
-                        val bit = (targetInt ushr (31 - i)) and 1L
-                        val siblingInt = curr or ((1L - bit) shl (31 - i))
-                        val siblingIp = String.format(
-                            java.util.Locale.US,
-                            "%d.%d.%d.%d",
-                            (siblingInt ushr 24) and 0xFFL,
-                            (siblingInt ushr 16) and 0xFFL,
-                            (siblingInt ushr 8) and 0xFFL,
-                            siblingInt and 0xFFL
-                        )
-                        builder.addRoute(siblingIp, i + 1)
-                        curr = curr or (bit shl (31 - i))
-                        addedCount++
-                    }
-                } else {
-                    // Целевой IP снаружи, добавляем блок целиком
-                    builder.addRoute(baseIp, basePrefix)
-                    addedCount++
-                }
+            var curr = 0L
+            for (i in 0 until 32) {
+                val bit = ((targetInt ushr (31 - i)) and 1L)
+                val siblingInt = curr or ((1L - bit) shl (31 - i))
+                val siblingIp = String.format(
+                    java.util.Locale.US,
+                    "%d.%d.%d.%d",
+                    (siblingInt ushr 24) and 0xFFL,
+                    (siblingInt ushr 16) and 0xFFL,
+                    (siblingInt ushr 8) and 0xFFL,
+                    siblingInt and 0xFFL
+                )
+                val prefixLength = i + 1
+                builder.addRoute(siblingIp, prefixLength)
+                curr = curr or (bit shl (31 - i))
             }
-            Log.d(TAG, "Successfully added $addedCount LAN-bypassed routes excluding server IP ($serverIpStr)")
+            Log.d(TAG, "Successfully added 32 CIDR routes excluding server IP ($serverIpStr)")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to compute excluded routes for $serverIpStr", e)
-            for ((ip, prefix) in standardBypassLan) {
-                try { builder.addRoute(ip, prefix) } catch (_: Exception) {}
-            }
+            Log.e(TAG, "Failed to compute excluded routes for $serverIpStr, falling back to 0.0.0.0/0", e)
+            builder.addRoute("0.0.0.0", 0)
         }
     }
 
