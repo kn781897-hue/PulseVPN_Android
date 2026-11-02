@@ -242,10 +242,8 @@ class MyVpnService : VpnService() {
             Log.d(TAG, "Starting Xray with config:\n$v2rayConfig")
             coreController!!.startLoop(v2rayConfig)
 
-            // Задержка, чтобы ядро Xray успело открыться и слушать порт 10808 перед tun2socks
-            try {
-                Thread.sleep(300)
-            } catch (e: InterruptedException) {}
+            // Ждём, пока ядро Xray откроет порт 10808 (до 3 сек)
+            waitForPort(10808, timeoutMs = 3000)
 
             tunThread = Thread {
                 try {
@@ -371,6 +369,22 @@ class MyVpnService : VpnService() {
             .setSmallIcon(R.mipmap.ic_launcher)
             .addAction(0, "Отключить", stopPending)
             .build()
+    }
+
+    // ожидание порта Xray
+
+    private fun waitForPort(port: Int, timeoutMs: Long = 3000) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            try {
+                java.net.Socket("127.0.0.1", port).use {
+                    Log.d(TAG, "Xray port $port is ready (${System.currentTimeMillis() - (deadline - timeoutMs)}ms)")
+                    return
+                }
+            } catch (_: Exception) {}
+            try { Thread.sleep(50) } catch (_: InterruptedException) {}
+        }
+        Log.w(TAG, "Xray port $port not ready after ${timeoutMs}ms, starting tun2socks anyway")
     }
 
     // маршрутизация без зацикливания
