@@ -99,18 +99,18 @@ class MyVpnService : VpnService() {
     @Volatile
     private var running = false
 
-    private var activeServerIp = ""
-    private var activeServerPort = 0
-    private var activeUuid = "d8352dcf-0a64-41cf-bb80-94ea6a1d30d7"
+    private var activeServerIp = "31.57.63.76"
+    private var activeServerPort = 20000
+    private var activeUuid = "d69c03d2-21b1-4fb0-92ce-074167dacaf5"
     private var activeProtocol = "vless"
-    private var activeSecurity = "reality"
-    private var activeNetwork = "tcp"
-    private var activePath = ""
-    private var activeSni = "pulsevpn.shop"
-    private var activePublicKey = "QbXfKUUrYUHJhdbGrTPDBMt57AMRD17yYQMf3RDEMVI"
-    private var activeShortId = "283b35fcf8fc"
-    private var activeFingerprint = "firefox"
-    private var activeFlow = "xtls-rprx-vision"
+    private var activeSecurity = "none"
+    private var activeNetwork = "ws"
+    private var activePath = "/api/v2/stream"
+    private var activeSni = "cdn.pulsevpn.shop"
+    private var activePublicKey = ""
+    private var activeShortId = ""
+    private var activeFingerprint = ""
+    private var activeFlow = ""
 
     // сервис
 
@@ -209,7 +209,7 @@ class MyVpnService : VpnService() {
                 .addDnsServer("1.1.1.1")
 
             // Исключаем IP сервера VPN из маршрутизации TUN, чтобы избежать зацикливания трафика (routing loop)
-            val serverTargetIp = activeServerIp.ifBlank { "31.59.136.18" }
+            val serverTargetIp = activeServerIp.ifBlank { "31.57.63.76" }
             addRoutesExcludingIp(builder, serverTargetIp)
 
             try {
@@ -430,14 +430,14 @@ class MyVpnService : VpnService() {
     // конфиг
 
     private fun buildV2RayConfig(): String {
-        val serverIp = activeServerIp.ifBlank { "31.59.136.18" }
-        val port = if (activeServerPort > 0) activeServerPort else 2082
-        val uuid = activeUuid.ifBlank { "d8352dcf-0a64-41cf-bb80-94ea6a1d30d7" }
+        val serverIp = activeServerIp.ifBlank { "31.57.63.76" }
+        val port = if (activeServerPort > 0) activeServerPort else 20000
+        val uuid = activeUuid.ifBlank { "d69c03d2-21b1-4fb0-92ce-074167dacaf5" }
         val protocol = activeProtocol.lowercase()
         val security = activeSecurity.lowercase()
         val network = activeNetwork.lowercase()
-        val path = if (activePath.isNotBlank()) activePath else "/vpn"
-        val sni = activeSni.ifBlank { "pulsevpn.shop" }
+        val path = if (activePath.isNotBlank()) activePath else "/api/v2/stream"
+        val sni = activeSni.ifBlank { "cdn.pulsevpn.shop" }
         val pubKey = activePublicKey.ifBlank { "QbXfKUUrYUHJhdbGrTPDBMt57AMRD17yYQMf3RDEMVI" }
         val shortId = activeShortId.ifBlank { "283b35fcf8fc" }
         val fingerprint = activeFingerprint.ifBlank { "firefox" }
@@ -475,7 +475,21 @@ class MyVpnService : VpnService() {
             }
             """.trimIndent()
         } else if (protocol == "vless") {
-            // VLESS-WebSocket через Cloudflare CDN
+            // VLESS-WebSocket (с TLS или без TLS / security=none)
+            val tlsBlock = if (security == "tls") {
+                """
+                "security": "tls",
+                "tlsSettings": {
+                  "serverName": "$sni",
+                  "fingerprint": "chrome"
+                },
+                """.trimIndent()
+            } else {
+                """
+                "security": "none",
+                """.trimIndent()
+            }
+
             """
             {
               "tag": "proxy",
@@ -496,11 +510,7 @@ class MyVpnService : VpnService() {
               },
               "streamSettings": {
                 "network": "ws",
-                "security": "tls",
-                "tlsSettings": {
-                  "serverName": "$sni",
-                  "fingerprint": "chrome"
-                },
+                $tlsBlock
                 "wsSettings": {
                   "path": "$path",
                   "headers": {

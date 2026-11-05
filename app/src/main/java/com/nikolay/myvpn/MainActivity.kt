@@ -28,8 +28,8 @@ import kotlin.concurrent.thread
 class MainActivity : AppCompatActivity() {
 
     // Основные параметры подключения к новому серверу
-    private var serverIp = "31.59.136.18"
-    private var serverPort = 2082
+    private var serverIp = "31.57.63.76"
+    private var serverPort = 20000
     private var currentState = VpnState.DISCONNECTED
     private enum class VpnState { DISCONNECTED, CONNECTING, CONNECTED }
     private var isPremiumUser = false
@@ -581,7 +581,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startVpnService() {
-        val customUuid = SubscriptionManager.getCustomUuid(this) ?: "d8352dcf-0a64-41cf-bb80-94ea6a1d30d7"
+        val customUuid = SubscriptionManager.getCustomUuid(this) ?: "d69c03d2-21b1-4fb0-92ce-074167dacaf5"
         val config = ServerConfigManager.getConfig(this)
         val intent = Intent(this, MyVpnService::class.java).apply {
             action = "START"

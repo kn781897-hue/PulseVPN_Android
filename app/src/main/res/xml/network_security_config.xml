@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Разрешаем HTTP для прямого IP сервера при fallback запросах -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">31.57.63.76</domain>
+    </domain-config>
+
     <!-- Безопасная конфигурация сети: доверяем только проверенным системным CA центрам -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>

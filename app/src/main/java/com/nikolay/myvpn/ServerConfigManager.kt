@@ -10,17 +10,17 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 data class ServerConfig(
-    val ip: String = "31.59.136.18",
-    val port: Int = 2082,
+    val ip: String = "31.57.63.76",
+    val port: Int = 20000,
     val protocol: String = "vless",
-    val security: String = "reality",
-    val network: String = "tcp",
-    val path: String = "",
-    val sni: String = "pulsevpn.shop",
-    val publicKey: String = "QbXfKUUrYUHJhdbGrTPDBMt57AMRD17yYQMf3RDEMVI",
-    val shortId: String = "283b35fcf8fc",
-    val fingerprint: String = "firefox",
-    val flow: String = "xtls-rprx-vision"
+    val security: String = "none",
+    val network: String = "ws",
+    val path: String = "/api/v2/stream",
+    val sni: String = "cdn.pulsevpn.shop",
+    val publicKey: String = "",
+    val shortId: String = "",
+    val fingerprint: String = "",
+    val flow: String = ""
 )
 
 object ServerConfigManager {
@@ -50,6 +50,11 @@ object ServerConfigManager {
     fun getConfig(context: Context): ServerConfig {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val default = ServerConfig()
+        val savedIp = prefs.getString(KEY_IP, null)
+        if (savedIp == null || savedIp == "31.59.136.18") {
+            saveConfig(context, default)
+            return default
+        }
         return ServerConfig(
             ip = prefs.getString(KEY_IP, default.ip) ?: default.ip,
             port = prefs.getInt(KEY_PORT, default.port),
@@ -152,31 +157,40 @@ object ServerConfigManager {
     fun fetchFromFallbackApi(context: Context, onConfigUpdated: ((ServerConfig) -> Unit)? = null) {
         Thread {
             try {
-                val request = Request.Builder()
-                    .url("https://pulsevpn.shop/api/config.json")
-                    .build()
-                val response = httpClient.newCall(request).execute()
-                if (response.isSuccessful) {
-                    val bodyStr = response.body?.string()
-                    if (!bodyStr.isNullOrBlank()) {
-                        val json = JSONObject(bodyStr)
-                        val current = getConfig(context)
-                        val newConfig = ServerConfig(
-                            ip = json.optString("ip", current.ip),
-                            port = json.optInt("port", current.port),
-                            protocol = json.optString("protocol", current.protocol),
-                            security = json.optString("security", current.security),
-                            network = json.optString("network", current.network),
-                            path = json.optString("path", current.path),
-                            sni = json.optString("sni", current.sni),
-                            publicKey = json.optString("publicKey", current.publicKey),
-                            shortId = json.optString("shortId", current.shortId),
-                            fingerprint = json.optString("fingerprint", current.fingerprint),
-                            flow = json.optString("flow", current.flow)
-                        )
-                        saveConfig(context, newConfig)
-                        onConfigUpdated?.invoke(newConfig)
-                    }
+                val urls = listOf(
+                    "http://31.57.63.76/api/config.json",
+                    "https://pulsevpn.shop/api/config.json"
+                )
+                for (url in urls) {
+                    try {
+                        val request = Request.Builder()
+                            .url(url)
+                            .build()
+                        val response = httpClient.newCall(request).execute()
+                        if (response.isSuccessful) {
+                            val bodyStr = response.body?.string()
+                            if (!bodyStr.isNullOrBlank()) {
+                                val json = JSONObject(bodyStr)
+                                val current = getConfig(context)
+                                val newConfig = ServerConfig(
+                                    ip = json.optString("ip", current.ip),
+                                    port = json.optInt("port", current.port),
+                                    protocol = json.optString("protocol", current.protocol),
+                                    security = json.optString("security", current.security),
+                                    network = json.optString("network", current.network),
+                                    path = json.optString("path", current.path),
+                                    sni = json.optString("sni", current.sni),
+                                    publicKey = json.optString("publicKey", current.publicKey),
+                                    shortId = json.optString("shortId", current.shortId),
+                                    fingerprint = json.optString("fingerprint", current.fingerprint),
+                                    flow = json.optString("flow", current.flow)
+                                )
+                                saveConfig(context, newConfig)
+                                onConfigUpdated?.invoke(newConfig)
+                                break
+                            }
+                        }
+                    } catch (_: Exception) {}
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Fallback API error: ${e.message}")

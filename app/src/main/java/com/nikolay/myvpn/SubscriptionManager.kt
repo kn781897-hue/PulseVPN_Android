@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.util.Base64
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -23,6 +24,7 @@ import javax.net.ssl.X509TrustManager
 
 object SubscriptionManager {
 
+    private const val TAG = "SubscriptionManager"
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
     private const val PREFS_TG = "VPN_TELEGRAM_AUTH"
@@ -81,7 +83,12 @@ object SubscriptionManager {
 
     fun getCustomUuid(context: Context): String? {
         val prefs = context.getSharedPreferences(PREFS_TG, Context.MODE_PRIVATE)
-        return prefs.getString(KEY_CUSTOM_UUID, null)
+        val uuid = prefs.getString(KEY_CUSTOM_UUID, null)
+        if (uuid == "d8352dcf-0a64-41cf-bb80-94ea6a1d30d7") {
+            saveCustomUuid(context, "d69c03d2-21b1-4fb0-92ce-074167dacaf5")
+            return "d69c03d2-21b1-4fb0-92ce-074167dacaf5"
+        }
+        return uuid
     }
 
     fun saveCustomUuid(context: Context, uuid: String) {
@@ -269,10 +276,50 @@ object SubscriptionManager {
             }
     }
 
+    // Парсинг полной конфигурации vless://
+    fun parseVlessLink(link: String): Pair<String, ServerConfig?> {
+        try {
+            val uri = Uri.parse(link.trim())
+            if (uri.scheme == "vless") {
+                val userInfo = uri.userInfo ?: uri.authority?.substringBefore("@") ?: ""
+                val host = uri.host ?: ""
+                val port = if (uri.port > 0) uri.port else 20000
+                val network = uri.getQueryParameter("type") ?: "ws"
+                val security = uri.getQueryParameter("security") ?: "none"
+                val path = uri.getQueryParameter("path") ?: "/api/v2/stream"
+                val sni = uri.getQueryParameter("host") ?: uri.getQueryParameter("sni") ?: host
+                val pbk = uri.getQueryParameter("pbk") ?: ""
+                val sid = uri.getQueryParameter("sid") ?: ""
+                val fp = uri.getQueryParameter("fp") ?: ""
+                val flow = uri.getQueryParameter("flow") ?: ""
+
+                val config = ServerConfig(
+                    ip = host,
+                    port = port,
+                    protocol = "vless",
+                    security = security,
+                    network = network,
+                    path = path,
+                    sni = sni,
+                    publicKey = pbk,
+                    shortId = sid,
+                    fingerprint = fp,
+                    flow = flow
+                )
+                return Pair(userInfo, config)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing vless link: ${e.message}")
+        }
+        return Pair("", null)
+    }
+
     // Извлечение чистого sub_id из введенного текста или полной ссылки
     fun extractSubId(input: String): String {
         var str = input.trim()
         if (str.startsWith("vless://")) {
+            val (uuid, _) = parseVlessLink(str)
+            if (uuid.isNotEmpty()) return uuid
             val uuidPart = str.removePrefix("vless://").substringBefore("@").trim()
             if (uuidPart.isNotEmpty()) return uuidPart
         }
@@ -296,6 +343,20 @@ object SubscriptionManager {
         rawKey: String,
         onResult: (success: Boolean, message: String) -> Unit
     ) {
+        val trimmed = rawKey.trim()
+        if (trimmed.startsWith("vless://")) {
+            val (uuid, parsedConfig) = parseVlessLink(trimmed)
+            if (parsedConfig != null) {
+                ServerConfigManager.saveConfig(context, parsedConfig)
+            }
+            if (uuid.isNotEmpty()) {
+                saveCustomUuid(context, uuid)
+                val deviceId = getDeviceId(context)
+                bindDeviceToSubId(context, uuid, deviceId, 0L, uuid, onResult)
+                return
+            }
+        }
+
         val cleanKey = extractSubId(rawKey)
         if (cleanKey.isEmpty()) {
             onResult(false, "Введите ключ или ссылку подписки")
@@ -316,7 +377,7 @@ object SubscriptionManager {
         }
     }
 
-    // Проверка sub_id через сервер подписок PulseVPN (https://pulsevpn.shop/getsub/ или https://sub.pulsevpn.shop/getsub/)
+    // Проверка sub_id через сервер подписок PulseVPN (https://pulsevpn.shop/getsub/ или https://sub.pulsevpn.shop/getsub/ или http://31.57.63.76/getsub/)
     private fun checkXuiSubscription(
         subId: String,
         callback: (success: Boolean, expiryMs: Long, extractedUuid: String?) -> Unit
@@ -344,6 +405,18 @@ object SubscriptionManager {
                         client.newCall(
                             Request.Builder()
                                 .url("https://sub.pulsevpn.shop/getsub/$subId")
+                                .header("User-Agent", "PulseVPN-Android")
+                                .build()
+                        ).execute()
+                    } catch (e: Exception) { null }
+                }
+
+                // 3. Fallback на http://31.57.63.76/getsub/$subId
+                if (response == null || !response.isSuccessful) {
+                    response = try {
+                        client.newCall(
+                            Request.Builder()
+                                .url("http://31.57.63.76/getsub/$subId")
                                 .header("User-Agent", "PulseVPN-Android")
                                 .build()
                         ).execute()
