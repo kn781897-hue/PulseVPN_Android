@@ -100,7 +100,7 @@ class MyVpnService : VpnService() {
     private var running = false
 
     private var activeServerIp = "31.57.63.76"
-    private var activeServerPort = 20000
+    private var activeServerPort = 80
     private var activeUuid = "d69c03d2-21b1-4fb0-92ce-074167dacaf5"
     private var activeProtocol = "vless"
     private var activeSecurity = "none"
@@ -431,7 +431,7 @@ class MyVpnService : VpnService() {
 
     private fun buildV2RayConfig(): String {
         val serverIp = activeServerIp.ifBlank { "31.57.63.76" }
-        val port = if (activeServerPort > 0) activeServerPort else 20000
+        val port = if (activeServerPort == 20000) 80 else if (activeServerPort > 0) activeServerPort else 80
         val uuid = activeUuid.ifBlank { "d69c03d2-21b1-4fb0-92ce-074167dacaf5" }
         val protocol = activeProtocol.lowercase()
         val security = activeSecurity.lowercase()

@@ -29,7 +29,7 @@ class MainActivity : AppCompatActivity() {
 
     // Основные параметры подключения к новому серверу
     private var serverIp = "31.57.63.76"
-    private var serverPort = 20000
+    private var serverPort = 80
     private var currentState = VpnState.DISCONNECTED
     private enum class VpnState { DISCONNECTED, CONNECTING, CONNECTED }
     private var isPremiumUser = false

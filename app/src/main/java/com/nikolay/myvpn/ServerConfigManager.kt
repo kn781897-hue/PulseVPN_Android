@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 
 data class ServerConfig(
     val ip: String = "31.57.63.76",
-    val port: Int = 20000,
+    val port: Int = 80,
     val protocol: String = "vless",
     val security: String = "none",
     val network: String = "ws",
@@ -51,7 +51,8 @@ object ServerConfigManager {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val default = ServerConfig()
         val savedIp = prefs.getString(KEY_IP, null)
-        if (savedIp == null || savedIp == "31.59.136.18") {
+        val savedPort = prefs.getInt(KEY_PORT, default.port)
+        if (savedIp == null || savedIp == "31.59.136.18" || savedPort == 2082 || savedPort == 20000) {
             saveConfig(context, default)
             return default
         }

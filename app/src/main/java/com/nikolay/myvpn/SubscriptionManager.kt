@@ -283,9 +283,14 @@ object SubscriptionManager {
             if (uri.scheme == "vless") {
                 val userInfo = uri.userInfo ?: uri.authority?.substringBefore("@") ?: ""
                 val host = uri.host ?: ""
-                val port = if (uri.port > 0) uri.port else 20000
                 val network = uri.getQueryParameter("type") ?: "ws"
                 val security = uri.getQueryParameter("security") ?: "none"
+                val port = when {
+                    uri.port == 20000 -> 80
+                    uri.port > 0 -> uri.port
+                    security == "tls" -> 443
+                    else -> 80
+                }
                 val path = uri.getQueryParameter("path") ?: "/api/v2/stream"
                 val sni = uri.getQueryParameter("host") ?: uri.getQueryParameter("sni") ?: host
                 val pbk = uri.getQueryParameter("pbk") ?: ""
