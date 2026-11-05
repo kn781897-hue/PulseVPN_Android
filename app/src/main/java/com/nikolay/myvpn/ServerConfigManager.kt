@@ -10,16 +10,16 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 data class ServerConfig(
-    val ip: String = "31.57.63.76",
-    val port: Int = 20000,
+    val ip: String = "cdn.pulsevpn.shop",
+    val port: Int = 443,
     val protocol: String = "vless",
-    val security: String = "none",
+    val security: String = "tls",
     val network: String = "ws",
     val path: String = "/api/v2/stream",
     val sni: String = "cdn.pulsevpn.shop",
     val publicKey: String = "",
     val shortId: String = "",
-    val fingerprint: String = "",
+    val fingerprint: String = "chrome",
     val flow: String = ""
 )
 
@@ -52,7 +52,8 @@ object ServerConfigManager {
         val default = ServerConfig()
         val savedIp = prefs.getString(KEY_IP, null)
         val savedPort = prefs.getInt(KEY_PORT, default.port)
-        if (savedIp == null || savedIp == "31.59.136.18" || savedPort == 2082) {
+        val savedSecurity = prefs.getString(KEY_SECURITY, default.security)
+        if (savedIp != default.ip || savedPort != default.port || savedSecurity != default.security) {
             saveConfig(context, default)
             return default
         }

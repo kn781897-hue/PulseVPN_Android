@@ -99,17 +99,17 @@ class MyVpnService : VpnService() {
     @Volatile
     private var running = false
 
-    private var activeServerIp = "31.57.63.76"
-    private var activeServerPort = 20000
+    private var activeServerIp = "cdn.pulsevpn.shop"
+    private var activeServerPort = 443
     private var activeUuid = "d69c03d2-21b1-4fb0-92ce-074167dacaf5"
     private var activeProtocol = "vless"
-    private var activeSecurity = "none"
+    private var activeSecurity = "tls"
     private var activeNetwork = "ws"
     private var activePath = "/api/v2/stream"
     private var activeSni = "cdn.pulsevpn.shop"
     private var activePublicKey = ""
     private var activeShortId = ""
-    private var activeFingerprint = ""
+    private var activeFingerprint = "chrome"
     private var activeFlow = ""
 
     // сервис
@@ -209,7 +209,7 @@ class MyVpnService : VpnService() {
                 .addDnsServer("1.1.1.1")
 
             // Исключаем IP сервера VPN из маршрутизации TUN, чтобы избежать зацикливания трафика (routing loop)
-            val serverTargetIp = activeServerIp.ifBlank { "31.57.63.76" }
+            val serverTargetIp = activeServerIp.ifBlank { "cdn.pulsevpn.shop" }
             addRoutesExcludingIp(builder, serverTargetIp)
 
             try {
@@ -430,8 +430,8 @@ class MyVpnService : VpnService() {
     // конфиг
 
     private fun buildV2RayConfig(): String {
-        val serverIp = activeServerIp.ifBlank { "31.57.63.76" }
-        val port = if (activeServerPort > 0) activeServerPort else 20000
+        val serverIp = activeServerIp.ifBlank { "cdn.pulsevpn.shop" }
+        val port = if (activeServerPort > 0) activeServerPort else 443
         val uuid = activeUuid.ifBlank { "d69c03d2-21b1-4fb0-92ce-074167dacaf5" }
         val protocol = activeProtocol.lowercase()
         val security = activeSecurity.lowercase()
@@ -440,7 +440,7 @@ class MyVpnService : VpnService() {
         val sni = activeSni.ifBlank { "cdn.pulsevpn.shop" }
         val pubKey = activePublicKey.ifBlank { "QbXfKUUrYUHJhdbGrTPDBMt57AMRD17yYQMf3RDEMVI" }
         val shortId = activeShortId.ifBlank { "283b35fcf8fc" }
-        val fingerprint = activeFingerprint.ifBlank { "firefox" }
+        val fingerprint = activeFingerprint.ifBlank { "chrome" }
         val flow = if (activeFlow.isNotBlank()) activeFlow else "xtls-rprx-vision"
 
         val proxyOutbound = if (protocol == "vless" && security == "reality") {
@@ -615,6 +615,18 @@ class MyVpnService : VpnService() {
               "settings": {}
             }
           ],
+          "routing": {
+            "domainStrategy": "AsIs",
+            "rules": [
+              {
+                "type": "field",
+                "inboundTag": [
+                  "socks"
+                ],
+                "outboundTag": "proxy"
+              }
+            ]
+          },
           "stats": {}
         }
         """.trimIndent()
